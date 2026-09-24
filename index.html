@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>הוצאות שותפים - מערכת חכמה</title>
+  <title>הוצאות שותפים - מערכת חכמה ומסונכרנת</title>
 
-  <!-- Fonts: Assistant & Rubik -->
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;500;600;700;800&family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -14,6 +14,10 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Firebase Scripts (Compat v9) לסנכרון ענן אמין ומהיר -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
   <script>
     tailwind.config = {
@@ -39,10 +43,6 @@
     input[type=number]::-webkit-outer-spin-button {
       opacity: 1;
     }
-
-    /* ======================================================== */
-    /* ערכות נושא מלאות לכל האתר לפי שותף                      */
-    /* ======================================================== */
 
     /* 1. אסף: שחור ואדום */
     body.theme-asaf {
@@ -77,36 +77,29 @@
       --glow: rgba(234, 179, 8, 0.4);
     }
 
-    /* יישום משתני העיצוב על כל האלמנטים במסך */
-    .themed-bg-page {
-      background-color: var(--bg-page, #0b1120) !important;
-    }
+    .themed-bg-page { background-color: var(--bg-page, #0a0a0c) !important; }
     .themed-card {
-      background-color: var(--bg-card, #111827) !important;
-      border-color: var(--border-accent, #334155) !important;
-      box-shadow: 0 4px 20px -2px var(--glow, rgba(0,0,0,0.5)) !important;
+      background-color: var(--bg-card, #121216) !important;
+      border-color: var(--border-accent, #ef4444) !important;
+      box-shadow: 0 4px 25px -2px var(--glow, rgba(0,0,0,0.5)) !important;
     }
     .themed-input-border {
-      border-color: var(--border-accent, #10b981) !important;
-      box-shadow: 0 0 15px var(--glow, rgba(16, 185, 129, 0.2)) !important;
+      border-color: var(--border-accent, #ef4444) !important;
+      box-shadow: 0 0 15px var(--glow, rgba(239, 68, 68, 0.2)) !important;
     }
     .themed-btn-primary {
-      background-color: var(--color-primary, #059669) !important;
+      background-color: var(--color-primary, #dc2626) !important;
       color: #ffffff !important;
       border: 1px solid var(--border-accent, transparent) !important;
-      box-shadow: 0 4px 15px var(--glow, rgba(5, 150, 105, 0.3)) !important;
+      box-shadow: 0 4px 15px var(--glow, rgba(220, 38, 38, 0.3)) !important;
     }
     .themed-btn-primary:hover {
-      background-color: var(--color-primary-hover, #047857) !important;
+      background-color: var(--color-primary-hover, #b91c1c) !important;
     }
-    .themed-text-accent {
-      color: var(--text-accent, #34d399) !important;
-    }
-    .themed-border-accent {
-      border-color: var(--border-accent, #34d399) !important;
-    }
+    .themed-text-accent { color: var(--text-accent, #ef4444) !important; }
+    .themed-border-accent { border-color: var(--border-accent, #ef4444) !important; }
     .themed-badge {
-      background-color: var(--color-primary, #059669) !important;
+      background-color: var(--color-primary, #dc2626) !important;
       color: var(--text-accent, #ffffff) !important;
       border: 1px solid var(--border-accent, transparent) !important;
     }
@@ -114,9 +107,7 @@
 </head>
 <body class="theme-asaf min-h-screen themed-bg-page text-slate-100 flex flex-col selection:bg-red-950 selection:text-red-200">
 
-  <!-- ============================================== -->
-  <!-- מסך התחברות מאובטח לשותפי הדירה                 -->
-  <!-- ============================================== -->
+  <!-- מסך התחברות מאובטח -->
   <div id="auth-screen" class="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4">
     <div class="bg-slate-900 rounded-3xl max-w-sm w-full p-6 sm:p-8 shadow-2xl border border-slate-800 text-center">
       
@@ -164,7 +155,6 @@
   <header class="bg-black/60 backdrop-blur-md border-b border-slate-800/80 sticky top-0 z-40 shadow-xs w-full">
     <div class="w-full px-4 sm:px-8 py-3 flex items-center justify-between">
       
-      <!-- Nav Tabs - שונה לבקשתך: "הוצאות שותפים" -->
       <nav class="flex items-center bg-slate-900/90 p-1 rounded-full text-sm font-semibold border border-slate-800">
         <button id="btn-tab-add" onclick="switchView('add')" class="flex items-center gap-1.5 py-1.5 px-4 rounded-full transition-all shadow-sm themed-btn-primary font-bold">
           <i data-lucide="plus-circle" class="w-4 h-4"></i>
@@ -176,12 +166,17 @@
         </button>
       </nav>
 
-      <!-- Brand + User Badge + Theme Icon -->
       <div class="flex items-center gap-2 sm:gap-3">
+        <!-- אינדיקטור סנכרון ענן חי -->
+        <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 py-1 px-2.5 rounded-xl text-[11px] font-semibold text-emerald-400">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span>ענן פעיל</span>
+        </div>
+
         <div class="flex items-center gap-2 bg-slate-900 border border-slate-800 py-1 px-3 rounded-xl text-xs font-semibold">
-          <span class="text-slate-400">שותף פעיל:</span>
+          <span class="text-slate-400">שותף:</span>
           <span id="current-user-badge" class="font-extrabold themed-text-accent">--</span>
-          <button onclick="handleLogout()" class="text-slate-400 hover:text-rose-500 ml-1 transition-colors" title="התנתק מהמערכת">
+          <button onclick="handleLogout()" class="text-slate-400 hover:text-rose-500 ml-1 transition-colors" title="התנתק">
             <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
           </button>
         </div>
@@ -202,20 +197,19 @@
     </div>
   </div>
 
-  <!-- Main Viewport - מסך מלא! -->
+  <!-- Main Viewport - מסך מלא -->
   <main class="flex-1 w-full p-4 sm:p-6 md:p-8">
 
-    <!-- מסך 1: הוספת הוצאה חדשה (נפתח על מסך מלא ורחב) -->
+    <!-- מסך 1: הוספת הוצאה -->
     <section id="view-add" class="w-full max-w-5xl mx-auto py-2">
       <div class="themed-card rounded-3xl p-6 sm:p-10 border transition-all w-full">
         
         <div class="text-center mb-6">
           <h2 class="text-3xl font-black text-white">הוספת הוצאה חדשה</h2>
-          <p class="text-xs text-slate-400 mt-1">כל שינוי והוצאה נשמרים אוטומטית לכולם</p>
+          <p class="text-xs text-slate-400 mt-1">כל שינוי נשמר ישירות בענן ומתעדכן אצל כולם מיד</p>
         </div>
 
         <form id="expense-form" onsubmit="handleFormSubmit(event)" class="space-y-6">
-          <!-- סכום עם מחשבון מהיר -->
           <div>
             <div class="flex justify-between items-center mb-1.5 px-0.5">
               <span class="text-[11px] text-slate-400">תומך בתרגילים (לדוגמה: 50+25.5)</span>
@@ -233,14 +227,12 @@
             </div>
           </div>
 
-          <!-- קטגוריה - כולל תוספת קטגוריית "בשר" -->
           <div>
             <label class="block text-sm font-bold text-slate-300 mb-2 text-center">קטגוריה</label>
             <div id="category-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-2.5"></div>
             <input type="hidden" id="selected-category" required />
           </div>
 
-          <!-- שותף ששילם - שינוי שותף משנה את כל הצבעים של האתר! -->
           <div>
             <div class="flex justify-between items-center mb-2 px-1">
               <button type="button" onclick="openAddRoommatePrompt()" class="text-xs themed-text-accent hover:underline font-semibold flex items-center gap-1">
@@ -253,13 +245,11 @@
             <input type="hidden" id="selected-roommate" required />
           </div>
 
-          <!-- חלוקת ההוצאה -->
           <div>
             <label class="block text-xs font-bold text-slate-300 mb-1.5 text-right">על מי מתחלקת ההוצאה?</label>
             <div id="split-participants-container" class="flex flex-wrap gap-2 justify-end"></div>
           </div>
 
-          <!-- תיאור ותאריך (כולל זיהוי חודש אוטומטי לשמירה לכולם) -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
             <div>
               <label class="block text-xs font-bold text-slate-300 mb-1.5 text-right">תיאור (אופציונלי)</label>
@@ -281,7 +271,6 @@
             </div>
           </div>
 
-          <!-- כפתור הוספה ענק ומעוצב לפי צבעי השותף -->
           <button
             type="submit"
             class="w-full py-4 themed-btn-primary active:scale-[0.99] rounded-2xl font-black text-lg transition-all flex items-center justify-center gap-2 mt-4"
@@ -294,15 +283,14 @@
       </div>
     </section>
 
-    <!-- מסך 2: הוצאות שותפים (דשבורד מלא) -->
+    <!-- מסך 2: הוצאות שותפים -->
     <section id="view-dashboard" class="hidden space-y-6 w-full max-w-7xl mx-auto">
 
-      <!-- Action Bar & Month Selector -->
       <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div class="flex items-center gap-3">
           <div class="text-right">
             <h2 class="text-2xl font-black text-white leading-tight">הוצאות שותפים</h2>
-            <p class="text-xs text-slate-400 mt-0.5">סיכום והתחשבנות בזמן אמת</p>
+            <p class="text-xs text-slate-400 mt-0.5">סיכום והתחשבנות מסונכרנת בזמן אמת</p>
           </div>
           <div class="w-10 h-10 rounded-2xl themed-badge flex items-center justify-center">
             <i data-lucide="calendar" class="w-5 h-5"></i>
@@ -310,8 +298,7 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-2 self-end sm:self-auto">
-          <!-- כפתור ייצוא לאקסל -->
-          <button onclick="exportToCSV()" class="px-3.5 py-2.5 bg-slate-900 hover:bg-slate-800 border themed-border-accent rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs" title="הורד קובץ אקסל של ההוצאות">
+          <button onclick="exportToCSV()" class="px-3.5 py-2.5 bg-slate-900 hover:bg-slate-800 border themed-border-accent rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs" title="הורד קובץ אקסל">
             <i data-lucide="file-spreadsheet" class="w-4 h-4 themed-text-accent"></i>
             ייצוא לאקסל
           </button>
@@ -321,15 +308,13 @@
             ניהול שותפים
           </button>
 
-          <!-- בחירת חודש - מסונכרן לכולם -->
           <select id="month-filter" onchange="changeSelectedMonth(this.value)" class="px-4 py-2.5 bg-slate-900 border themed-border-accent rounded-xl text-xs font-bold text-slate-200 focus:outline-none transition-all shadow-xs">
           </select>
         </div>
       </div>
 
-      <!-- 3 Metrics Cards -->
+      <!-- 3 כרטיסיות סיכום -->
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <!-- סך הוצאות הדירה -->
         <div class="themed-card p-6 rounded-2xl border shadow-xs relative overflow-hidden flex flex-col justify-between">
           <div class="flex items-center justify-between mb-3">
             <span class="text-xs font-bold text-slate-400">סך הוצאות הדירה</span>
@@ -343,7 +328,6 @@
           </div>
         </div>
 
-        <!-- ממוצע לשותף -->
         <div class="themed-card p-6 rounded-2xl border shadow-xs relative overflow-hidden flex flex-col justify-between">
           <div class="flex items-center justify-between mb-3">
             <span class="text-xs font-bold text-slate-400">ממוצע לשותף</span>
@@ -357,7 +341,6 @@
           </div>
         </div>
 
-        <!-- שותפים בדירה -->
         <div class="themed-card p-6 rounded-2xl border shadow-xs relative overflow-hidden flex flex-col justify-between">
           <div class="flex items-center justify-between mb-3">
             <span class="text-xs font-bold text-slate-400">שותפים בדירה</span>
@@ -372,7 +355,7 @@
         </div>
       </div>
 
-      <!-- התחשבנות חכמה (מי משלם למי) כולל הגדרת שכ"ד של קנאו -->
+      <!-- התחשבנות חכמה כולל שכ"ד קנאו -->
       <div class="themed-card rounded-3xl p-6 sm:p-8 border shadow-xs">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
           <div class="flex items-center gap-3">
@@ -386,7 +369,6 @@
           </div>
 
           <div class="flex items-center gap-3">
-            <!-- מתג שכר דירה של קנאו -->
             <label class="flex items-center gap-2 text-xs font-semibold text-slate-300 bg-slate-900 border border-slate-800 px-3.5 py-2 rounded-xl cursor-pointer hover:bg-slate-800 transition-colors">
               <input type="checkbox" id="toggle-rent" checked onchange="toggleRentSettlement()" class="rounded text-red-500 focus:ring-red-500 w-3.5 h-3.5" />
               <span>כלול שכ"ד קנאו (₪1,250)</span>
@@ -424,7 +406,6 @@
         <div class="p-5 border-b border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <h4 class="font-bold text-slate-200 text-base">פירוט כל ההוצאות</h4>
 
-          <!-- פילטרים -->
           <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             <div class="relative flex-1 sm:w-56">
               <i data-lucide="search" class="w-3.5 h-3.5 text-slate-500 absolute right-3 top-3"></i>
@@ -466,7 +447,7 @@
     </section>
   </main>
 
-  <!-- Modal: עריכת הוצאה קיימת -->
+  <!-- Modal עריכה -->
   <div id="edit-expense-modal" class="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-slate-900 rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-800">
       <div class="flex items-center justify-between mb-4">
@@ -505,7 +486,7 @@
     </div>
   </div>
 
-  <!-- Modal: ניהול שותפים -->
+  <!-- Modal ניהול שותפים -->
   <div id="roommates-modal" class="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-slate-900 rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-800">
       <div class="flex items-center justify-between mb-4">
@@ -522,17 +503,27 @@
     </div>
   </div>
 
-  <!-- JAVASCRIPT: שליטה דינמית בצבעי האתר לפי שותף -->
+  <!-- JAVASCRIPT & FIREBASE SYNC -->
   <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyAhPVtjj_kuHD6mHPLmvcmAQHJ4aCtxCSU",
+      authDomain: "roommates-expenses-bar-ilan.firebaseapp.com",
+      projectId: "roommates-expenses-bar-ilan",
+      storageBucket: "roommates-expenses-bar-ilan.firebasestorage.app",
+      messagingSenderId: "187375672619",
+      appId: "1:187375672619:web:13c34905e4e4ef57ccb96e",
+      measurementId: "G-G93YCQZ9HK"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const expensesCollection = db.collection('expenses');
+    const settingsDoc = db.collection('settings').doc('appData');
+
     const APARTMENT_SECRET_CODE = '5005';
-
-    const STORAGE_KEY_AUTH_USER = 'flat_auth_user_v5';
-    const STORAGE_KEY_EXPENSES = 'flat_expenses_persistent_v13';
-    const STORAGE_KEY_ROOMMATES = 'flat_roommates_persistent_v13';
+    const STORAGE_KEY_AUTH_USER = 'flat_auth_user_v6';
     const STORAGE_KEY_INCLUDE_RENT = 'flat_include_rent';
-    const STORAGE_KEY_CUSTOM_MONTHS = 'flat_custom_months_v2';
 
-    // קטגוריות עם בשר
     const CATEGORIES = [
       { id: 'סופר', name: 'סופר / קניות', icon: 'shopping-cart' },
       { id: 'בשר', name: 'בשר 🥩', icon: 'flame' },
@@ -543,7 +534,6 @@
       { id: 'שונות', name: 'שונות', icon: 'package' }
     ];
 
-    // נתוני ההוצאות ההיסטוריות
     const INITIAL_EXCEL_EXPENSES = [
       {"id":"exp_05_001","amount":400.0,"roommate":"אלעד","category":"שונות","description":"תנור","date":"2026-05-02"},
       {"id":"exp_05_002","amount":5000.0,"roommate":"אסף","category":"שונות","description":"מזגנים","date":"2026-05-03"},
@@ -611,16 +601,11 @@
       {"id":"exp_09_064","amount":759.94,"roommate":"קנאו","category":"סופר","description":"אושר עד","date":"2026-09-22"}
     ];
 
-    let roommates = JSON.parse(localStorage.getItem(STORAGE_KEY_ROOMMATES)) || ['אסף', 'אלעד', 'קנאו'];
-    let expenses = JSON.parse(localStorage.getItem(STORAGE_KEY_EXPENSES)) || INITIAL_EXCEL_EXPENSES;
-    let customMonths = JSON.parse(localStorage.getItem(STORAGE_KEY_CUSTOM_MONTHS)) || [];
+    let roommates = ['אסף', 'אלעד', 'קנאו'];
+    let expenses = [];
+    let customMonths = [];
     let includeRent = localStorage.getItem(STORAGE_KEY_INCLUDE_RENT) !== 'false';
     let currentUser = localStorage.getItem(STORAGE_KEY_AUTH_USER) || null;
-
-    if (!localStorage.getItem(STORAGE_KEY_EXPENSES)) {
-      localStorage.setItem(STORAGE_KEY_EXPENSES, JSON.stringify(expenses));
-      localStorage.setItem(STORAGE_KEY_ROOMMATES, JSON.stringify(roommates));
-    }
 
     let selectedMonth = '2026-09';
     let categoryChart = null;
@@ -628,6 +613,7 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       checkAuthStatus();
+      initFirebaseRealtimeSync();
 
       document.getElementById('date').value = new Date().toISOString().split('T')[0];
       document.getElementById('toggle-rent').checked = includeRent;
@@ -638,30 +624,67 @@
       populateMonthFilter();
       updateTableFilterOptions();
 
-      // האזנה לתאריך חדש - שומר חודש לכולם
       document.getElementById('date').addEventListener('change', (e) => {
         const val = e.target.value;
-        if (val) {
-          registerNewMonth(val.substring(0, 7));
-        }
+        if (val) registerNewMonth(val.substring(0, 7));
       });
 
       switchView('add');
       lucide.createIcons();
     });
 
-    // שינוי עיצוב וצבעי האתר כולו לפי השותף
+    function initFirebaseRealtimeSync() {
+      expensesCollection.onSnapshot(snapshot => {
+        if (snapshot.empty) {
+          seedInitialData();
+        } else {
+          expenses = [];
+          snapshot.forEach(doc => {
+            const data = doc.data();
+            data.id = doc.id;
+            expenses.push(data);
+          });
+          expenses.sort((a, b) => new Date(b.date) - new Date(a.date));
+          populateMonthFilter();
+          refreshDashboard();
+        }
+      }, err => {
+        console.warn('Firebase error:', err);
+      });
+
+      settingsDoc.onSnapshot(doc => {
+        if (doc.exists) {
+          const data = doc.data();
+          if (data.roommates && data.roommates.length) {
+            roommates = data.roommates;
+            renderRoommatesChips();
+            renderSplitParticipants();
+            updateTableFilterOptions();
+          }
+          if (data.customMonths) {
+            customMonths = data.customMonths;
+            populateMonthFilter();
+          }
+        }
+      });
+    }
+
+    async function seedInitialData() {
+      const batch = db.batch();
+      INITIAL_EXCEL_EXPENSES.forEach(exp => {
+        const docRef = expensesCollection.doc(exp.id);
+        batch.set(docRef, exp);
+      });
+      await batch.commit();
+      settingsDoc.set({ roommates: ['אסף', 'אלעד', 'קנאו'], customMonths: [] });
+    }
+
     function applyGlobalTheme(roommateName) {
       document.body.classList.remove('theme-asaf', 'theme-elad', 'theme-kanao');
-      if (roommateName === 'אסף') {
-        document.body.classList.add('theme-asaf');
-      } else if (roommateName === 'אלעד') {
-        document.body.classList.add('theme-elad');
-      } else if (roommateName === 'קנאו') {
-        document.body.classList.add('theme-kanao');
-      } else {
-        document.body.classList.add('theme-asaf');
-      }
+      if (roommateName === 'אסף') document.body.classList.add('theme-asaf');
+      else if (roommateName === 'אלעד') document.body.classList.add('theme-elad');
+      else if (roommateName === 'קנאו') document.body.classList.add('theme-kanao');
+      else document.body.classList.add('theme-asaf');
       renderCategoryGrid();
     }
 
@@ -705,7 +728,7 @@
         currentUser = user;
         localStorage.setItem(STORAGE_KEY_AUTH_USER, user);
         checkAuthStatus();
-        showToast(`ברוך הבא, ${user}! האתר הותאם לצבעים שלך`);
+        showToast(`ברוך הבא, ${user}!`);
       } else {
         alert('קוד גישה שגוי! אנא נסה שוב.');
       }
@@ -772,7 +795,6 @@
       renderCategoryGrid();
     }
 
-    // בחירת שותף ששילם - צובעת את כל האתר לפי הצבעים שלו!
     function renderRoommatesChips() {
       const container = document.getElementById('roommates-chips');
       const hiddenInput = document.getElementById('selected-roommate');
@@ -816,7 +838,7 @@
 
     function selectRoommate(name) {
       document.getElementById('selected-roommate').value = name;
-      applyGlobalTheme(name); // משנה את הצבעים של כל האתר מיד!
+      applyGlobalTheme(name);
       renderRoommatesChips();
     }
 
@@ -842,7 +864,7 @@
       }
     }
 
-    function handleFormSubmit(e) {
+    async function handleFormSubmit(e) {
       e.preventDefault();
       const amountRaw = document.getElementById('amount').value;
       const amount = evaluateAmountInput(amountRaw);
@@ -865,7 +887,6 @@
       }
 
       const newExpense = {
-        id: 'exp_' + Date.now(),
         amount: amount,
         roommate: roommate,
         category: category,
@@ -875,29 +896,28 @@
         createdAt: new Date().toISOString()
       };
 
-      if (date) {
-        registerNewMonth(date.substring(0, 7));
+      if (date) registerNewMonth(date.substring(0, 7));
+
+      try {
+        await expensesCollection.add(newExpense);
+        document.getElementById('amount').value = '';
+        document.getElementById('description').value = '';
+
+        document.getElementById('selected-roommate').value = currentUser;
+        applyGlobalTheme(currentUser);
+        renderRoommatesChips();
+
+        showToast(`הוצאה של ₪${amount.toFixed(2)} נשמרה וסונכרנה בענן!`);
+      } catch (err) {
+        alert('שגיאה בשמירה בענן: ' + err.message);
       }
-
-      expenses.unshift(newExpense);
-      localStorage.setItem(STORAGE_KEY_EXPENSES, JSON.stringify(expenses));
-
-      document.getElementById('amount').value = '';
-      document.getElementById('description').value = '';
-
-      document.getElementById('selected-roommate').value = currentUser;
-      applyGlobalTheme(currentUser);
-      renderRoommatesChips();
-
-      populateMonthFilter();
-      showToast(`הוצאה של ₪${amount.toFixed(2)} נשמרה בהצלחה!`);
     }
 
     function registerNewMonth(ym) {
       if (ym && !customMonths.includes(ym)) {
         customMonths.push(ym);
         customMonths.sort().reverse();
-        localStorage.setItem(STORAGE_KEY_CUSTOM_MONTHS, JSON.stringify(customMonths));
+        settingsDoc.set({ customMonths: customMonths }, { merge: true });
         populateMonthFilter();
       }
     }
@@ -1065,11 +1085,10 @@
         roommateTotals[e.roommate] = (roommateTotals[e.roommate] || 0) + e.amount;
       });
 
-      // צבעי עמודות לפי הצבעים של כל שותף
       const roommateColors = roommates.map(name => {
-        if (name === 'אסף') return '#ef4444'; // אדום של אסף
-        if (name === 'אלעד') return '#2563eb'; // כחול של אלעד
-        if (name === 'קנאו') return '#10b981'; // ירוק של קנאו
+        if (name === 'אסף') return '#ef4444';
+        if (name === 'אלעד') return '#2563eb';
+        if (name === 'קנאו') return '#10b981';
         return '#059669';
       });
 
@@ -1183,7 +1202,7 @@
       document.getElementById('edit-expense-modal').classList.add('hidden');
     }
 
-    function saveEditedExpense(e) {
+    async function saveEditedExpense(e) {
       e.preventDefault();
       const id = document.getElementById('edit-id').value;
       const amount = parseFloat(document.getElementById('edit-amount').value);
@@ -1192,31 +1211,32 @@
       const category = document.getElementById('edit-category').value;
       const date = document.getElementById('edit-date').value;
 
-      const idx = expenses.findIndex(x => x.id === id);
-      if (idx !== -1) {
-        expenses[idx].amount = amount;
-        expenses[idx].description = desc;
-        expenses[idx].roommate = roommate;
-        expenses[idx].category = category;
-        expenses[idx].date = date;
+      try {
+        await expensesCollection.doc(id).update({
+          amount: amount,
+          description: desc,
+          roommate: roommate,
+          category: category,
+          date: date
+        });
 
-        if (date) {
-          registerNewMonth(date.substring(0, 7));
-        }
+        if (date) registerNewMonth(date.substring(0, 7));
 
-        localStorage.setItem(STORAGE_KEY_EXPENSES, JSON.stringify(expenses));
         closeEditModal();
-        refreshDashboard();
-        showToast('ההוצאה עודכנה בהצלחה!');
+        showToast('ההוצאה עודכנה בענן בהצלחה!');
+      } catch (err) {
+        alert('שגיאה בעדכון בענן: ' + err.message);
       }
     }
 
-    function deleteExpense(id) {
-      if (confirm('האם למחוק הוצאה זו?')) {
-        expenses = expenses.filter(e => e.id !== id);
-        localStorage.setItem(STORAGE_KEY_EXPENSES, JSON.stringify(expenses));
-        refreshDashboard();
-        showToast('ההוצאה נמחקה ונשמרה אוטומטית');
+    async function deleteExpense(id) {
+      if (confirm('האם למחוק הוצאה זו מהענן?')) {
+        try {
+          await expensesCollection.doc(id).delete();
+          showToast('ההוצאה נמחקה מהענן');
+        } catch (err) {
+          alert('שגיאה במחיקה: ' + err.message);
+        }
       }
     }
 
@@ -1287,11 +1307,11 @@
         const clean = name.trim();
         if (!roommates.includes(clean)) {
           roommates.push(clean);
-          localStorage.setItem(STORAGE_KEY_ROOMMATES, JSON.stringify(roommates));
+          settingsDoc.set({ roommates: roommates }, { merge: true });
           selectRoommate(clean);
           renderSplitParticipants();
           updateTableFilterOptions();
-          showToast(`השותף ${clean} נוסף ונשמר!`);
+          showToast(`השותף ${clean} נוסף וסונכרן!`);
         }
       }
     }
@@ -1318,13 +1338,13 @@
       const name = input.value.trim();
       if (name && !roommates.includes(name)) {
         roommates.push(name);
-        localStorage.setItem(STORAGE_KEY_ROOMMATES, JSON.stringify(roommates));
+        settingsDoc.set({ roommates: roommates }, { merge: true });
         input.value = '';
         renderRoommatesChips();
         renderSplitParticipants();
         updateTableFilterOptions();
         openManageRoommatesModal();
-        showToast(`השותף ${name} נוסף ונשמר אוטומטית!`);
+        showToast(`השותף ${name} נוסף וסונכרן!`);
       }
     }
 
@@ -1335,7 +1355,7 @@
       }
       if (confirm(`להסיר את ${name}?`)) {
         roommates = roommates.filter(r => r !== name);
-        localStorage.setItem(STORAGE_KEY_ROOMMATES, JSON.stringify(roommates));
+        settingsDoc.set({ roommates: roommates }, { merge: true });
         renderRoommatesChips();
         renderSplitParticipants();
         updateTableFilterOptions();
