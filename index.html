@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>הוצאות שותפים - מערכת חכמה</title>
+
+  <!-- Fonts: Assistant & Rubik -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;500;600;700;800&family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS, Lucide, Chart.js -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Assistant', 'Rubik', 'sans-serif'],
+            mono: ['Rubik', 'monospace']
+          },
+          colors: {
+            emeraldPrimary: '#059669',
+            emeraldDark: '#047857',
+            emeraldLight: '#ecfdf5',
+            appBg: '#f3f6fa'
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Assistant', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-[#f3f6fa] dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col selection:bg-emerald-100 dark:selection:bg-emerald-900 selection:text-emerald-900 dark:selection:text-emerald-100">
+
+  <!-- ============================================== -->
+  <!-- מסך התחברות מאובטח לשותפי הדירה                 -->
+  <!-- ============================================== -->
+  <div id="auth-screen" class="fixed inset-0 bg-slate-900/95 z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full p-6 sm:p-8 shadow-2xl border border-slate-100 dark:border-slate-800 text-center">
+      
+      <div class="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emeraldPrimary flex items-center justify-center mx-auto mb-4 shadow-sm border border-emerald-100 dark:border-emerald-800/50">
+        <i data-lucide="lock" class="w-7 h-7"></i>
+      </div>
+      
+      <h2 class="text-2xl font-black text-slate-900 dark:text-white">דירת שותפים</h2>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-6">כניסה מורשית לשותפי הדירה בלבד</p>
+
+      <form id="auth-form" onsubmit="handleLogin(event)" class="space-y-4 text-right">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">מי נכנס/ת?</label>
+          <div class="grid grid-cols-3 gap-2" id="login-roommates">
+            <button type="button" onclick="selectLoginUser('אסף')" class="login-user-btn py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold transition-all bg-emerald-50 dark:bg-emerald-950/60 border-emerald-500 text-emeraldPrimary" data-user="אסף">אסף</button>
+            <button type="button" onclick="selectLoginUser('אלעד')" class="login-user-btn py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold transition-all bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700" data-user="אלעד">אלעד</button>
+            <button type="button" onclick="selectLoginUser('קנאו')" class="login-user-btn py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold transition-all bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700" data-user="קנאו">קנאו</button>
+          </div>
+          <input type="hidden" id="auth-user" value="אסף" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">קוד גישה</label>
+          <input
+            type="password"
+            id="auth-passcode"
+            required
+            placeholder="הזן קוד סודי"
+            class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-center text-sm font-bold tracking-widest text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-emeraldPrimary focus:outline-none transition-all placeholder:text-slate-400 placeholder:font-normal"
+          />
+        </div>
+
+        <button
+          type="submit"
+          class="w-full py-3 bg-emeraldPrimary hover:bg-emeraldDark active:scale-[0.99] text-white rounded-xl font-bold text-sm shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 mt-2"
+        >
+          <i data-lucide="log-in" class="w-4 h-4"></i>
+          <span>התחבר למערכת</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Header Navigation -->
+  <header class="bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-800 sticky top-0 z-40 shadow-xs">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      
+      <!-- Nav Tabs -->
+      <nav class="flex items-center bg-slate-100/90 dark:bg-slate-800 p-1 rounded-full text-sm font-semibold text-slate-600 dark:text-slate-300">
+        <button id="btn-tab-add" onclick="switchView('add')" class="flex items-center gap-1.5 py-1.5 px-4 rounded-full transition-all shadow-sm bg-white dark:bg-slate-900 text-emeraldPrimary border border-slate-200/60 dark:border-slate-700 font-bold">
+          <i data-lucide="plus-circle" class="w-4 h-4 text-emeraldPrimary"></i>
+          הוספת הוצאה
+        </button>
+        <button id="btn-tab-dashboard" onclick="switchView('dashboard')" class="flex items-center gap-1.5 py-1.5 px-4 rounded-full transition-all text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white">
+          <i data-lucide="layout-grid" class="w-4 h-4"></i>
+          דשבורד והתחשבנות
+        </button>
+      </nav>
+
+      <!-- Brand + User Badge + Dark Mode Toggle -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <!-- כפתור מצב שחור -->
+        <button
+          onclick="toggleDarkMode()"
+          id="dark-mode-toggle"
+          class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+          title="החלף מצב תצוגה (יום / לילה)"
+        >
+          <i id="theme-icon" data-lucide="moon" class="w-4 h-4"></i>
+        </button>
+
+        <div class="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 py-1 px-2.5 rounded-xl text-xs font-semibold">
+          <span class="text-slate-400 dark:text-slate-400">מחובר:</span>
+          <span id="current-user-badge" class="font-bold text-emeraldPrimary">--</span>
+          <button onclick="handleLogout()" class="text-slate-400 hover:text-rose-600 ml-1 transition-colors" title="התנתק מהמערכת">
+            <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+
+        <div class="w-9 h-9 rounded-2xl bg-emeraldPrimary flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
+          <i data-lucide="wallet-cards" class="w-5 h-5"></i>
+        </div>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed top-20 left-1/2 -translate-x-1/2 z-50 opacity-0 pointer-events-none transition-all duration-300">
+    <div class="bg-slate-900 dark:bg-slate-800 border border-slate-800 dark:border-slate-700 text-white px-5 py-2.5 rounded-full shadow-xl flex items-center gap-2.5 text-xs font-semibold">
+      <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
+      <span id="toast-message">נשמר אוטומטית!</span>
+    </div>
+  </div>
+
+  <!-- Main Viewport -->
+  <main class="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 md:p-8">
+
+    <!-- מסך 1: הוספת הוצאה חדשה (נפתח כברירת מחדל) -->
+    <section id="view-add" class="max-w-lg mx-auto py-4">
+      <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-200/80 dark:border-slate-800 shadow-sm transition-all">
+        
+        <div class="text-center mb-6">
+          <h2 class="text-2xl font-black text-slate-900 dark:text-white">הוספת הוצאה חדשה</h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">כל שינוי והוצאה נשמרים אוטומטית מיד לזיכרון</p>
+        </div>
+
+        <form id="expense-form" onsubmit="handleFormSubmit(event)" class="space-y-5">
+          <!-- סכום עם מחשבון מהיר -->
+          <div>
+            <div class="flex justify-between items-center mb-1.5 px-0.5">
+              <span class="text-[10px] text-slate-400">תומך בתרגילים (לדוגמה: 50+25.5)</span>
+              <label class="text-xs font-bold text-slate-700 dark:text-slate-300">סכום ההוצאה (₪)</label>
+            </div>
+            <div class="relative">
+              <span class="absolute inset-y-0 right-4 flex items-center text-2xl font-bold text-slate-400 pointer-events-none">₪</span>
+              <input
+                type="text"
+                id="amount"
+                required
+                placeholder="0.00"
+                class="w-full pr-12 pl-4 py-3 bg-white dark:bg-slate-800 border-2 border-emeraldPrimary rounded-2xl text-2xl font-bold text-slate-900 dark:text-white text-center focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all placeholder:text-slate-300 dark:placeholder:text-slate-600"
+              />
+            </div>
+          </div>
+
+          <!-- קטגוריה -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 text-center">קטגוריה</label>
+            <div id="category-grid" class="grid grid-cols-3 gap-2.5"></div>
+            <input type="hidden" id="selected-category" required />
+          </div>
+
+          <!-- שותף ששילם (זיהוי אישי חכם ובחירה גמישה) -->
+          <div>
+            <div class="flex justify-between items-center mb-1.5 px-0.5">
+              <button type="button" onclick="openAddRoommatePrompt()" class="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 font-semibold flex items-center gap-1">
+                <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
+                הוסף שותף חדש
+              </button>
+              <label class="text-xs font-bold text-slate-700 dark:text-slate-300">השותף ששילם</label>
+            </div>
+            <div id="roommates-chips" class="flex flex-wrap gap-2 justify-end"></div>
+            <input type="hidden" id="selected-roommate" required />
+          </div>
+
+          <!-- חלוקת ההוצאה -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 text-right">על מי מתחלקת ההוצאה?</label>
+            <div id="split-participants-container" class="flex flex-wrap gap-2 justify-end"></div>
+          </div>
+
+          <!-- תיאור ותאריך -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 text-right">תיאור (אופציונלי)</label>
+              <input
+                type="text"
+                id="description"
+                placeholder="לדוגמה: אושר עד, סלקום..."
+                class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-700 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-900 focus:border-emeraldPrimary focus:outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 text-right"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 text-right">תאריך</label>
+              <input
+                type="date"
+                id="date"
+                required
+                class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-900 focus:border-emeraldPrimary focus:outline-none transition-all"
+              />
+            </div>
+          </div>
+
+          <!-- כפתור הוספה -->
+          <button
+            type="submit"
+            class="w-full py-3.5 bg-emeraldPrimary hover:bg-emeraldDark active:scale-[0.99] text-white rounded-2xl font-bold text-base shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 mt-4"
+          >
+            <i data-lucide="plus-circle" class="w-5 h-5"></i>
+            <span>הוסף הוצאה</span>
+          </button>
+        </form>
+
+      </div>
+    </section>
+
+    <!-- מסך 2: דשבורד, גרפים והתחשבנות חכמה -->
+    <section id="view-dashboard" class="hidden space-y-6">
+
+      <!-- Action Bar & Month Selector -->
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="text-right">
+            <h2 class="text-xl font-bold text-slate-900 dark:text-white leading-tight">סיכום חודשי והתחשבנות</h2>
+            <p class="text-xs text-slate-400 dark:text-slate-400 mt-0.5">נתונים והוצאות בזמן אמת</p>
+          </div>
+          <div class="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emeraldPrimary flex items-center justify-center border border-emerald-100 dark:border-emerald-800/50">
+            <i data-lucide="calendar" class="w-5 h-5"></i>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 self-end sm:self-auto">
+          <!-- כפתור ייצוא לאקסל -->
+          <button onclick="exportToCSV()" class="px-3 py-2 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs" title="הורד קובץ אקסל של ההוצאות">
+            <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600 dark:text-emerald-400"></i>
+            ייצוא לאקסל
+          </button>
+
+          <button onclick="openManageRoommatesModal()" class="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-1.5 transition-all shadow-xs">
+            <i data-lucide="users" class="w-4 h-4 text-slate-500 dark:text-slate-400"></i>
+            ניהול שותפים
+          </button>
+
+          <select id="month-filter" onchange="changeSelectedMonth(this.value)" class="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-emeraldPrimary transition-all shadow-xs">
+          </select>
+        </div>
+      </div>
+
+      <!-- 3 Metrics Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <!-- סך הוצאות הדירה -->
+        <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs relative overflow-hidden flex flex-col justify-between">
+          <div class="absolute top-0 right-0 left-0 h-1 bg-emerald-500"></div>
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-xs font-bold text-slate-500 dark:text-slate-400">סך הוצאות הדירה</span>
+            <div class="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+              <i data-lucide="wallet" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <div class="text-right">
+            <h3 id="stat-total" class="text-2xl font-black text-slate-900 dark:text-white tracking-tight font-mono">₪0.00</h3>
+            <span id="stat-count" class="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 block">0 הוצאות בחשבון הנוכחי</span>
+          </div>
+        </div>
+
+        <!-- ממוצע לשותף -->
+        <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs relative overflow-hidden flex flex-col justify-between">
+          <div class="absolute top-0 right-0 left-0 h-1 bg-sky-500"></div>
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-xs font-bold text-slate-500 dark:text-slate-400">ממוצע לשותף</span>
+            <div class="w-8 h-8 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 flex items-center justify-center">
+              <i data-lucide="pie-chart" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <div class="text-right">
+            <h3 id="stat-average" class="text-2xl font-black text-slate-900 dark:text-white tracking-tight font-mono">₪0.00</h3>
+            <span class="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 block">מתחלק שווה בשווה בין כולם</span>
+          </div>
+        </div>
+
+        <!-- שותפים בדירה -->
+        <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs relative overflow-hidden flex flex-col justify-between">
+          <div class="absolute top-0 right-0 left-0 h-1 bg-indigo-500"></div>
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-xs font-bold text-slate-500 dark:text-slate-400">שותפים בדירה</span>
+            <div class="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+              <i data-lucide="users" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <div class="text-right">
+            <h3 id="stat-roommates-count" class="text-2xl font-black text-slate-900 dark:text-white font-mono">3</h3>
+            <span class="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 block">שותפים פעילים במערכת</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- התחשבנות חכמה (מי משלם למי) כולל הגדרת שכ"ד של קנאו -->
+      <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+          <div class="flex items-center gap-2.5">
+            <div class="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-100 dark:border-amber-800/50">
+              <i data-lucide="arrow-left-right" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <h3 class="font-extrabold text-base text-slate-900 dark:text-white">התחשבנות חכמה (מי משלם למי)</h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">חישוב אוטומטי המאזן את כל החובות במינימום העברות</p>
+            </div>
+          </div>
+
+          <!-- כפתורי פעולה עליונים בהתחשבנות -->
+          <div class="flex items-center gap-2">
+            <!-- מתג שכר דירה של קנאו -->
+            <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-xl cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+              <input type="checkbox" id="toggle-rent" checked onchange="toggleRentSettlement()" class="rounded text-emeraldPrimary focus:ring-emerald-500 w-3.5 h-3.5" />
+              <span>כלול שכ"ד קנאו (₪1,250)</span>
+            </label>
+
+            <button onclick="shareWhatsAppSummary()" class="px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emeraldDark dark:text-emerald-300 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all">
+              <i data-lucide="share-2" class="w-3.5 h-3.5"></i>
+              שלח לוואטסאפ
+            </button>
+          </div>
+        </div>
+
+        <div id="settlements-container"></div>
+      </div>
+
+      <!-- Charts -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col">
+          <h4 class="font-bold text-slate-800 dark:text-slate-200 text-sm mb-4 text-right">הוצאות לפי קטגוריות</h4>
+          <div class="relative flex-1 flex items-center justify-center min-h-[220px]">
+            <canvas id="categoryChart"></canvas>
+          </div>
+        </div>
+
+        <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col">
+          <h4 class="font-bold text-slate-800 dark:text-slate-200 text-sm mb-4 text-right">הוצאות בפועל לפי שותף</h4>
+          <div class="relative flex-1 flex items-center justify-center min-h-[220px]">
+            <canvas id="roommateChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- All Expenses Table -->
+      <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden">
+        <div class="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <h4 class="font-bold text-slate-800 dark:text-slate-200 text-base">פירוט כל ההוצאות</h4>
+
+          <!-- Table Filters -->
+          <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <div class="relative flex-1 sm:w-56">
+              <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute right-3 top-2.5"></i>
+              <input
+                type="text"
+                id="search-input"
+                oninput="renderTable()"
+                placeholder="חיפוש לפי תיאור..."
+                class="w-full pl-3 pr-8 py-1.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-lg focus:outline-none focus:border-emeraldPrimary transition-all text-right"
+              />
+            </div>
+            <select id="table-category-filter" onchange="renderTable()" class="text-xs bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 focus:outline-none">
+              <option value="ALL">כל הקטגוריות</option>
+            </select>
+            <select id="table-roommate-filter" onchange="renderTable()" class="text-xs bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 focus:outline-none">
+              <option value="ALL">כל השותפים</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-right text-xs">
+            <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 font-semibold border-b border-slate-100 dark:border-slate-800">
+              <tr>
+                <th class="py-3 px-4">תאריך</th>
+                <th class="py-3 px-4">קטגוריה</th>
+                <th class="py-3 px-4">תיאור</th>
+                <th class="py-3 px-4">שותף</th>
+                <th class="py-3 px-4">חלוקה</th>
+                <th class="py-3 px-4">סכום</th>
+                <th class="py-3 px-4 text-center">פעולות</th>
+              </tr>
+            </thead>
+            <tbody id="expenses-table-body" class="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- Modal: עריכת הוצאה קיימת -->
+  <div id="edit-expense-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 dark:border-slate-800">
+      <div class="flex items-center justify-between mb-4">
+        <button onclick="closeEditModal()" class="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+        <h3 class="font-black text-slate-900 dark:text-white text-base">עריכת הוצאה</h3>
+      </div>
+      <form id="edit-form" onsubmit="saveEditedExpense(event)" class="space-y-3">
+        <input type="hidden" id="edit-id" />
+        <div>
+          <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1 text-right">סכום (₪)</label>
+          <input type="number" step="0.01" min="0.1" id="edit-amount" required class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-center text-slate-900 dark:text-white focus:outline-none focus:border-emeraldPrimary" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1 text-right">תיאור</label>
+          <input type="text" id="edit-description" required class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-right text-slate-900 dark:text-white focus:outline-none focus:border-emeraldPrimary" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1 text-right">שותף ששילם</label>
+          <select id="edit-roommate" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs focus:outline-none focus:border-emeraldPrimary"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1 text-right">קטגוריה</label>
+          <select id="edit-category" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs focus:outline-none focus:border-emeraldPrimary"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1 text-right">תאריך</label>
+          <input type="date" id="edit-date" required class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs focus:outline-none focus:border-emeraldPrimary" />
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button type="submit" class="flex-1 py-2.5 bg-emeraldPrimary hover:bg-emeraldDark text-white font-bold rounded-xl text-xs transition-all">שמור שינויים</button>
+          <button type="button" onclick="closeEditModal()" class="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-xl text-xs transition-all">ביטול</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: ניהול שותפים -->
+  <div id="roommates-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 dark:border-slate-800">
+      <div class="flex items-center justify-between mb-4">
+        <button onclick="closeManageRoommatesModal()" class="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+        <h3 class="font-black text-slate-900 dark:text-white text-base">ניהול שותפים בדירה</h3>
+      </div>
+      <div id="roommates-list-manage" class="space-y-2 mb-4 max-h-48 overflow-y-auto"></div>
+      <div class="flex gap-2">
+        <button onclick="addRoommateFromInput()" class="px-4 py-2 bg-emeraldPrimary hover:bg-emeraldDark text-white text-xs font-bold rounded-xl transition-all">הוסף</button>
+        <input type="text" id="new-roommate-input" placeholder="שם שותף חדש..." class="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs text-right focus:outline-none focus:border-emeraldPrimary" />
+      </div>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT: אבטחה, התחברות וניהול שוטף -->
+  <script>
+    // הגדרת סיסמת הדירה החדשה
+    const APARTMENT_SECRET_CODE = '5005';
+
+    const STORAGE_KEY_AUTH_USER = 'flat_auth_user_v3';
+    const STORAGE_KEY_EXPENSES = 'flat_expenses_persistent_v11';
+    const STORAGE_KEY_ROOMMATES = 'flat_roommates_persistent_v11';
+    const STORAGE_KEY_INCLUDE_RENT = 'flat_include_rent';
+    const STORAGE_KEY_DARK_MODE = 'flat_dark_mode_pref';
+
+    const CATEGORIES = [
+      { id: 'שכירות', name: 'שכר דירה', icon: 'home', color: '#10b981' },
+      { id: 'חשבונות', name: 'חשמל / מים / ארנונה', icon: 'zap', color: '#f59e0b' },
+      { id: 'סופר', name: 'סופר / קניות', icon: 'shopping-cart', color: '#3b82f6' },
+      { id: 'ניקיון', name: 'ניקיון ותחזוקה', icon: 'sparkles', color: '#8b5cf6' },
+      { id: 'בילויים', name: 'בילויים / מסעדות', icon: 'utensils', color: '#ec4899' },
+      { id: 'שונות', name: 'שונות', icon: 'package', color: '#64748b' }
+    ];
+
+    // נתוני 64 ההוצאות ההיסטוריות מחודשים 5 עד 9
+    const INITIAL_EXCEL_EXPENSES = [
+      {"id":"exp_05_001","amount":400.0,"roommate":"אלעד","category":"שונות","description":"תנור","date":"2026-05-02"},
+      {"id":"exp_05_002","amount":5000.0,"roommate":"אסף","category":"שונות","description":"מזגנים","date":"2026-05-03"},
+      {"id":"exp_05_003","amount":6800.0,"roommate":"קנאו","category":"שונות","description":"מזגנים","date":"2026-05-03"},
+      {"id":"exp_05_004","amount":900.0,"roommate":"אסף","category":"חשבונות","description":"גז","date":"2026-05-04"},
+      {"id":"exp_05_005","amount":200.0,"roommate":"קנאו","category":"חשבונות","description":"גז","date":"2026-05-04"},
+      {"id":"exp_05_006","amount":340.0,"roommate":"אסף","category":"שונות","description":"ציוד כללי חסונה","date":"2026-05-05"},
+      {"id":"exp_05_007","amount":630.0,"roommate":"קנאו","category":"ניקיון","description":"קניות ראשוניות לניקוי הדירה","date":"2026-05-06"},
+      {"id":"exp_05_008","amount":480.0,"roommate":"קנאו","category":"שונות","description":"כיריים","date":"2026-05-07"},
+      {"id":"exp_05_009","amount":160.0,"roommate":"קנאו","category":"שונות","description":"כבל רשת","date":"2026-05-08"},
+      {"id":"exp_05_010","amount":650.0,"roommate":"קנאו","category":"שונות","description":"שולחן קפה/סלוני","date":"2026-05-09"},
+      {"id":"exp_05_011","amount":900.0,"roommate":"קנאו","category":"שונות","description":"הובלה","date":"2026-05-10"},
+      {"id":"exp_05_012","amount":132.0,"roommate":"אלעד","category":"חשבונות","description":"סלקום","date":"2026-05-12"},
+      {"id":"exp_05_013","amount":130.0,"roommate":"אסף","category":"סופר","description":"קניות","date":"2026-05-18"},
+      {"id":"exp_05_014","amount":326.0,"roommate":"אלעד","category":"סופר","description":"קניות","date":"2026-05-18"},
+      {"id":"exp_05_015","amount":257.32,"roommate":"קנאו","category":"סופר","description":"קניות","date":"2026-05-18"},
+      {"id":"exp_05_016","amount":226.0,"roommate":"אלעד","category":"סופר","description":"קניות","date":"2026-05-19"},
+      {"id":"exp_05_017","amount":80.0,"roommate":"קנאו","category":"סופר","description":"קניות","date":"2026-05-19"},
+      {"id":"exp_05_018","amount":605.0,"roommate":"אלעד","category":"סופר","description":"קניות","date":"2026-05-20"},
+      {"id":"exp_05_019","amount":289.16,"roommate":"קנאו","category":"סופר","description":"קניות","date":"2026-05-20"},
+      {"id":"exp_05_020","amount":239.0,"roommate":"אלעד","category":"סופר","description":"קניות","date":"2026-05-21"},
+      {"id":"exp_05_021","amount":340.0,"roommate":"קנאו","category":"סופר","description":"קניות","date":"2026-05-21"},
+      {"id":"exp_05_022","amount":146.0,"roommate":"אלעד","category":"סופר","description":"קניות","date":"2026-05-22"},
+      {"id":"exp_05_023","amount":200.0,"roommate":"קנאו","category":"סופר","description":"קניות","date":"2026-05-22"},
+      {"id":"exp_06_024","amount":180.0,"roommate":"אלעד","category":"חשבונות","description":"סלקום","date":"2026-06-03"},
+      {"id":"exp_06_025","amount":800.0,"roommate":"אסף","category":"חשבונות","description":"חשמל","date":"2026-06-15"},
+      {"id":"exp_06_026","amount":80.0,"roommate":"אסף","category":"חשבונות","description":"גז","date":"2026-06-15"},
+      {"id":"exp_06_027","amount":200.0,"roommate":"אסף","category":"חשבונות","description":"ועד ביניין","date":"2026-06-15"},
+      {"id":"exp_06_028","amount":100.0,"roommate":"קנאו","category":"חשבונות","description":"ועד ביניין","date":"2026-06-15"},
+      {"id":"exp_06_029","amount":270.6,"roommate":"אלעד","category":"ניקיון","description":"פילטרים","date":"2026-06-08"},
+      {"id":"exp_06_030","amount":475.0,"roommate":"קנאו","category":"ניקיון","description":"פילטרים","date":"2026-06-08"},
+      {"id":"exp_06_031","amount":699.73,"roommate":"קנאו","category":"סופר","description":"אושר עד","date":"2026-06-08"},
+      {"id":"exp_06_032","amount":700.0,"roommate":"קנאו","category":"שונות","description":"בר מים","date":"2026-06-12"},
+      {"id":"exp_06_033","amount":100.0,"roommate":"קנאו","category":"סופר","description":"פינוקים","date":"2026-06-14"},
+      {"id":"exp_06_034","amount":200.0,"roommate":"אסף","category":"סופר","description":"אוכל","date":"2026-06-17"},
+      {"id":"exp_06_035","amount":651.0,"roommate":"אלעד","category":"סופר","description":"אוכל","date":"2026-06-17"},
+      {"id":"exp_06_036","amount":448.0,"roommate":"אלעד","category":"סופר","description":"קניות","date":"2026-06-15"},
+      {"id":"exp_06_037","amount":310.0,"roommate":"אלעד","category":"סופר","description":"אושר עד","date":"2026-06-28"},
+      {"id":"exp_07_038","amount":180.0,"roommate":"אלעד","category":"חשבונות","description":"סלקום","date":"2026-07-03"},
+      {"id":"exp_07_039","amount":400.0,"roommate":"אסף","category":"חשבונות","description":"חשמל","date":"2026-07-05"},
+      {"id":"exp_07_040","amount":40.0,"roommate":"אסף","category":"חשבונות","description":"גז","date":"2026-07-07"},
+      {"id":"exp_07_041","amount":150.0,"roommate":"אסף","category":"חשבונות","description":"ועד ביניין","date":"2026-07-15"},
+      {"id":"exp_07_042","amount":620.16,"roommate":"קנאו","category":"סופר","description":"אושר עד","date":"2026-07-06"},
+      {"id":"exp_07_043","amount":180.0,"roommate":"אסף","category":"ניקיון","description":"שואב אבק","date":"2026-07-12"},
+      {"id":"exp_07_044","amount":553.13,"roommate":"אלעד","category":"סופר","description":"אושר עד","date":"2026-07-12"},
+      {"id":"exp_07_045","amount":443.8,"roommate":"אלעד","category":"סופר","description":"אושר עד","date":"2026-07-19"},
+      {"id":"exp_07_046","amount":669.11,"roommate":"אלעד","category":"סופר","description":"אושר עד","date":"2026-07-26"},
+      {"id":"exp_08_047","amount":180.0,"roommate":"אלעד","category":"חשבונות","description":"סלקום","date":"2026-08-03"},
+      {"id":"exp_08_048","amount":400.0,"roommate":"אסף","category":"חשבונות","description":"חשמל","date":"2026-08-05"},
+      {"id":"exp_08_049","amount":40.0,"roommate":"אסף","category":"חשבונות","description":"גז","date":"2026-08-07"},
+      {"id":"exp_08_050","amount":150.0,"roommate":"אסף","category":"חשבונות","description":"ועד ביניין","date":"2026-08-07"},
+      {"id":"exp_08_051","amount":332.48,"roommate":"קנאו","category":"סופר","description":"אושר עד","date":"2026-08-17"},
+      {"id":"exp_08_052","amount":500.0,"roommate":"אלעד","category":"סופר","description":"אושר עד","date":"2026-08-02"},
+      {"id":"exp_08_053","amount":673.71,"roommate":"אלעד","category":"סופר","description":"אושר עד","date":"2026-08-09"},
+      {"id":"exp_08_054","amount":672.49,"roommate":"קנאו","category":"סופר","description":"קניות","date":"2026-08-24"},
+      {"id":"exp_08_055","amount":59.8,"roommate":"קנאו","category":"סופר","description":"קניות","date":"2026-08-28"},
+      {"id":"exp_09_056","amount":180.0,"roommate":"אלעד","category":"חשבונות","description":"סלקום","date":"2026-09-03"},
+      {"id":"exp_09_057","amount":510.0,"roommate":"אסף","category":"חשבונות","description":"חשמל","date":"2026-09-05"},
+      {"id":"exp_09_058","amount":40.0,"roommate":"אסף","category":"חשבונות","description":"גז","date":"2026-09-07"},
+      {"id":"exp_09_059","amount":150.0,"roommate":"אסף","category":"חשבונות","description":"ועד ביניין","date":"2026-09-08"},
+      {"id":"exp_09_060","amount":368.68,"roommate":"קנאו","category":"סופר","description":"אושר עד","date":"2026-09-01"},
+      {"id":"exp_09_061","amount":630.08,"roommate":"אלעד","category":"סופר","description":"אושר עד","date":"2026-09-02"},
+      {"id":"exp_09_062","amount":840.67,"roommate":"אלעד","category":"סופר","description":"אושר עד","date":"2026-09-14"},
+      {"id":"exp_09_063","amount":81.73,"roommate":"קנאו","category":"שונות","description":"ליז","date":"2026-09-18"},
+      {"id":"exp_09_064","amount":759.94,"roommate":"קנאו","category":"סופר","description":"אושר עד","date":"2026-09-22"}
+    ];
+
+    let roommates = JSON.parse(localStorage.getItem(STORAGE_KEY_ROOMMATES)) || ['אסף', 'אלעד', 'קנאו'];
+    let expenses = JSON.parse(localStorage.getItem(STORAGE_KEY_EXPENSES)) || INITIAL_EXCEL_EXPENSES;
+    let includeRent = localStorage.getItem(STORAGE_KEY_INCLUDE_RENT) !== 'false';
+    let currentUser = localStorage.getItem(STORAGE_KEY_AUTH_USER) || null;
+
+    if (!localStorage.getItem(STORAGE_KEY_EXPENSES)) {
+      localStorage.setItem(STORAGE_KEY_EXPENSES, JSON.stringify(expenses));
+      localStorage.setItem(STORAGE_KEY_ROOMMATES, JSON.stringify(roommates));
+    }
+
+    let selectedMonth = '2026-09';
+    let categoryChart = null;
+    let roommateChart = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initTheme();
+      checkAuthStatus();
+
+      document.getElementById('date').value = new Date().toISOString().split('T')[0];
+      document.getElementById('toggle-rent').checked = includeRent;
+
+      renderCategoryGrid();
+      renderRoommatesChips();
+      renderSplitParticipants();
+      populateMonthFilter();
+      updateTableFilterOptions();
+
+      switchView('add');
+      lucide.createIcons();
+    });
+
+    // ניהול מצב שחור (Dark Mode)
+    function initTheme() {
+      const isDark = localStorage.getItem(STORAGE_KEY_DARK_MODE) === 'true';
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      updateThemeIcon(isDark);
+    }
+
+    function toggleDarkMode() {
+      const isDark = document.documentElement.classList.toggle('dark');
+      localStorage.setItem(STORAGE_KEY_DARK_MODE, isDark);
+      updateThemeIcon(isDark);
+      refreshDashboard(); // מרענן את הגרפים להתאמת צבעי הטקסט
+    }
+
+    function updateThemeIcon(isDark) {
+      const icon = document.getElementById('theme-icon');
+      if (icon) {
+        icon.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
+        lucide.createIcons();
+      }
+    }
+
+    // בדיקת התחברות וזיהוי אישי חכם
+    function checkAuthStatus() {
+      const authScreen = document.getElementById('auth-screen');
+      const badge = document.getElementById('current-user-badge');
+
+      if (!currentUser) {
+        authScreen.classList.remove('hidden');
+      } else {
+        authScreen.classList.add('hidden');
+        badge.innerText = currentUser;
+        
+        document.getElementById('selected-roommate').value = currentUser;
+        renderRoommatesChips();
+      }
+    }
+
+    function selectLoginUser(user) {
+      document.getElementById('auth-user').value = user;
+      document.querySelectorAll('.login-user-btn').forEach(btn => {
+        if (btn.getAttribute('data-user') === user) {
+          btn.className = 'login-user-btn py-2.5 rounded-xl border border-emerald-500 text-xs font-bold transition-all bg-emerald-50 dark:bg-emerald-950/60 text-emeraldPrimary';
+        } else {
+          btn.className = 'login-user-btn py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold transition-all bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700';
+        }
+      });
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+      const user = document.getElementById('auth-user').value;
+      const code = document.getElementById('auth-passcode').value;
+
+      if (code === APARTMENT_SECRET_CODE) {
+        currentUser = user;
+        localStorage.setItem(STORAGE_KEY_AUTH_USER, user);
+        checkAuthStatus();
+        showToast(`ברוך הבא, ${user}!`);
+      } else {
+        alert('קוד גישה שגוי! אנא נסה שוב.');
+      }
+    }
+
+    function handleLogout() {
+      if (confirm('האם להתנתק מהמערכת?')) {
+        localStorage.removeItem(STORAGE_KEY_AUTH_USER);
+        currentUser = null;
+        document.getElementById('auth-passcode').value = '';
+        checkAuthStatus();
+      }
+    }
+
+    function switchView(viewName) {
+      const viewAdd = document.getElementById('view-add');
+      const viewDash = document.getElementById('view-dashboard');
+      const btnAdd = document.getElementById('btn-tab-add');
+      const btnDash = document.getElementById('btn-tab-dashboard');
+
+      if (viewName === 'add') {
+        viewAdd.classList.remove('hidden');
+        viewDash.classList.add('hidden');
+        btnAdd.className = "flex items-center gap-1.5 py-1.5 px-4 rounded-full transition-all shadow-sm bg-white dark:bg-slate-900 text-emeraldPrimary border border-slate-200/60 dark:border-slate-700 font-bold";
+        btnDash.className = "flex items-center gap-1.5 py-1.5 px-4 rounded-full transition-all text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white";
+      } else {
+        viewAdd.classList.add('hidden');
+        viewDash.classList.remove('hidden');
+        btnDash.className = "flex items-center gap-1.5 py-1.5 px-4 rounded-full transition-all shadow-sm bg-white dark:bg-slate-900 text-emeraldPrimary border border-slate-200/60 dark:border-slate-700 font-bold";
+        btnAdd.className = "flex items-center gap-1.5 py-1.5 px-4 rounded-full transition-all text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white";
+        refreshDashboard();
+      }
+      lucide.createIcons();
+    }
+
+    function renderCategoryGrid() {
+      const container = document.getElementById('category-grid');
+      const hiddenInput = document.getElementById('selected-category');
+      const currentSelected = hiddenInput.value || CATEGORIES[2].id;
+      hiddenInput.value = currentSelected;
+
+      container.innerHTML = CATEGORIES.map(cat => {
+        const isSelected = cat.id === currentSelected;
+        return `
+          <button
+            type="button"
+            onclick="selectCategory('${cat.id}')"
+            class="flex flex-col items-center justify-center p-3 rounded-2xl border text-center transition-all ${
+              isSelected
+                ? 'border-emerald-500 bg-emerald-50/70 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-300 font-bold'
+                : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-850 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+            }"
+          >
+            <i data-lucide="${cat.icon}" class="w-5 h-5 mb-1 ${isSelected ? 'text-emeraldPrimary' : 'text-slate-500 dark:text-slate-400'}"></i>
+            <span class="text-[11px] leading-tight">${cat.name}</span>
+          </button>
+        `;
+      }).join('');
+      lucide.createIcons();
+    }
+
+    function selectCategory(id) {
+      document.getElementById('selected-category').value = id;
+      renderCategoryGrid();
+    }
+
+    function renderRoommatesChips() {
+      const container = document.getElementById('roommates-chips');
+      const hiddenInput = document.getElementById('selected-roommate');
+      
+      const currentSelected = hiddenInput.value || currentUser || roommates[0];
+      hiddenInput.value = currentSelected;
+
+      container.innerHTML = roommates.map(name => {
+        const isSelected = name === currentSelected;
+        const isMe = name === currentUser;
+
+        return `
+          <button
+            type="button"
+            onclick="selectRoommate('${name}')"
+            class="px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${
+              isSelected
+                ? 'bg-emeraldPrimary text-white border-emeraldPrimary shadow-sm scale-105'
+                : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
+            }"
+          >
+            <span>${name}</span>
+            ${isMe ? '<span class="text-[10px] opacity-80 font-normal">(אני)</span>' : ''}
+          </button>
+        `;
+      }).join('');
+    }
+
+    function selectRoommate(name) {
+      document.getElementById('selected-roommate').value = name;
+      renderRoommatesChips();
+    }
+
+    function renderSplitParticipants() {
+      const container = document.getElementById('split-participants-container');
+      container.innerHTML = roommates.map(name => `
+        <label class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold cursor-pointer bg-slate-50 dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-750 transition-all text-slate-800 dark:text-slate-200">
+          <input type="checkbox" name="split-roommate" value="${name}" checked class="rounded text-emeraldPrimary focus:ring-emerald-500 w-3.5 h-3.5 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600" />
+          <span>${name}</span>
+        </label>
+      `).join('');
+    }
+
+    function evaluateAmountInput(val) {
+      if (!val) return null;
+      try {
+        const sanitized = val.replace(/[^0-9+\-*/.]/g, '');
+        const evaluated = Function('"use strict";return (' + sanitized + ')')();
+        const num = parseFloat(evaluated);
+        return isNaN(num) || num <= 0 ? null : num;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function handleFormSubmit(e) {
+      e.preventDefault();
+      const amountRaw = document.getElementById('amount').value;
+      const amount = evaluateAmountInput(amountRaw);
+      const roommate = document.getElementById('selected-roommate').value;
+      const category = document.getElementById('selected-category').value;
+      const desc = document.getElementById('description').value.trim();
+      const date = document.getElementById('date').value;
+
+      const splitCheckboxes = document.querySelectorAll('input[name="split-roommate"]:checked');
+      const splitWith = Array.from(splitCheckboxes).map(cb => cb.value);
+
+      if (!amount || amount <= 0) {
+        alert('אנא הזן סכום תקין');
+        return;
+      }
+
+      if (splitWith.length === 0) {
+        alert('יש לבחור לפחות שותף אחד עליו מתחלקת ההוצאה');
+        return;
+      }
+
+      const newExpense = {
+        id: 'exp_' + Date.now(),
+        amount: amount,
+        roommate: roommate,
+        category: category,
+        description: desc || CATEGORIES.find(c => c.id === category)?.name || 'הוצאה',
+        date: date,
+        splitWith: splitWith.length === roommates.length ? null : splitWith,
+        createdAt: new Date().toISOString()
+      };
+
+      expenses.unshift(newExpense);
+      localStorage.setItem(STORAGE_KEY_EXPENSES, JSON.stringify(expenses));
+
+      document.getElementById('amount').value = '';
+      document.getElementById('description').value = '';
+
+      document.getElementById('selected-roommate').value = currentUser;
+      renderRoommatesChips();
+
+      populateMonthFilter();
+      showToast(`סכום של ₪${amount.toFixed(2)} נשמר אוטומטית!`);
+    }
+
+    function getFilteredExpenses() {
+      if (selectedMonth === 'ALL') return expenses;
+      return expenses.filter(e => e.date && e.date.startsWith(selectedMonth));
+    }
+
+    function toggleRentSettlement() {
+      includeRent = document.getElementById('toggle-rent').checked;
+      localStorage.setItem(STORAGE_KEY_INCLUDE_RENT, includeRent);
+      refreshDashboard();
+    }
+
+    function refreshDashboard() {
+      const filtered = getFilteredExpenses();
+      const total = filtered.reduce((sum, item) => sum + item.amount, 0);
+      const count = roommates.length || 1;
+      const avg = total / count;
+
+      document.getElementById('stat-total').innerText = `₪${total.toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      document.getElementById('stat-count').innerText = `${filtered.length} הוצאות בחשבון הנוכחי`;
+      document.getElementById('stat-average').innerText = `₪${avg.toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      document.getElementById('stat-roommates-count').innerText = roommates.length;
+
+      calculateSettlementsWithRent(filtered);
+      renderCharts(filtered);
+      renderTable();
+    }
+
+    function calculateSettlementsWithRent(filteredExpenses) {
+      const paidMap = {};
+      const shareMap = {};
+      roommates.forEach(r => {
+        paidMap[r] = 0;
+        shareMap[r] = 0;
+      });
+
+      filteredExpenses.forEach(e => {
+        paidMap[e.roommate] = (paidMap[e.roommate] || 0) + e.amount;
+        const participants = e.splitWith && e.splitWith.length ? e.splitWith : roommates;
+        const splitShare = e.amount / participants.length;
+        participants.forEach(p => {
+          shareMap[p] = (shareMap[p] || 0) + splitShare;
+        });
+      });
+
+      const netBalances = {};
+      roommates.forEach(r => {
+        netBalances[r] = (paidMap[r] || 0) - (shareMap[r] || 0);
+      });
+
+      if (includeRent && roommates.includes('קנאו') && (roommates.includes('אסף') || roommates.includes('אלעד'))) {
+        netBalances['קנאו'] = (netBalances['קנאו'] || 0) - 1250;
+        if (roommates.includes('אסף')) netBalances['אסף'] = (netBalances['אסף'] || 0) + 625;
+        if (roommates.includes('אלעד')) netBalances['אלעד'] = (netBalances['אלעד'] || 0) + 625;
+      }
+
+      const debtors = [];
+      const creditors = [];
+
+      roommates.forEach(r => {
+        const diff = netBalances[r];
+        if (diff < -0.05) debtors.push({ name: r, amount: -diff });
+        if (diff > 0.05) creditors.push({ name: r, amount: diff });
+      });
+
+      debtors.sort((a, b) => b.amount - a.amount);
+      creditors.sort((a, b) => b.amount - a.amount);
+
+      const settlements = [];
+      let d = 0, c = 0;
+      while (d < debtors.length && c < creditors.length) {
+        const settle = Math.min(debtors[d].amount, creditors[c].amount);
+        if (settle > 0.05) {
+          settlements.push({ from: debtors[d].name, to: creditors[c].name, amount: settle });
+        }
+        debtors[d].amount -= settle;
+        creditors[c].amount -= settle;
+        if (debtors[d].amount <= 0.05) d++;
+        if (creditors[c].amount <= 0.05) c++;
+      }
+
+      window.currentSettlements = settlements;
+
+      const container = document.getElementById('settlements-container');
+      if (settlements.length === 0) {
+        container.innerHTML = `
+          <div class="py-4 px-5 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/50 border border-emerald-200/80 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-semibold flex items-center justify-center gap-2">
+            <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600 dark:text-emerald-400"></i>
+            ההתחשבנות מאוזנת לחלוטין! אף אחד לא חייב כסף לאחר.
+          </div>
+        `;
+      } else {
+        container.innerHTML = `
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            ${settlements.map(s => `
+              <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 flex items-center justify-between">
+                <div>
+                  <div class="flex items-center gap-2 text-xs">
+                    <span class="font-bold text-slate-800 dark:text-white">${s.from}</span>
+                    <span class="text-slate-400 dark:text-slate-500">מעביר/ה אל</span>
+                    <span class="font-bold text-emeraldPrimary dark:text-emerald-400">${s.to}</span>
+                  </div>
+                  <div class="flex items-center gap-2 mt-1.5">
+                    <button onclick="openPaymentLink('${s.to}',${s.amount.toFixed(2)})" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold flex items-center gap-1 transition-all">
+                      <i data-lucide="smartphone" class="w-3 h-3"></i>
+                      שלם ב-Bit / PayBox
+                    </button>
+                  </div>
+                </div>
+                <span class="font-black text-slate-900 dark:text-white text-sm font-mono bg-white dark:bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700">
+                  ₪${s.amount.toFixed(2)}
+                </span>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+      lucide.createIcons();
+    }
+
+    function openPaymentLink(payee, amount) {
+      alert(`מעבר להעברת ₪${amount} אל ${payee}.\nבטלפון הנייד האפליקציה תיפתח ישירות!`);
+    }
+
+    function renderCharts(filteredExpenses) {
+      const isDark = document.documentElement.classList.contains('dark');
+      const textColor = isDark ? '#94a3b8' : '#64748b';
+      const gridColor = isDark ? '#1e293b' : '#f1f5f9';
+
+      const catTotals = {};
+      CATEGORIES.forEach(c => catTotals[c.name] = 0);
+      filteredExpenses.forEach(e => {
+        const catObj = CATEGORIES.find(c => c.id === e.category);
+        const name = catObj ? catObj.name : e.category;
+        catTotals[name] = (catTotals[name] || 0) + e.amount;
+      });
+
+      const catLabels = CATEGORIES.map(c => c.name);
+      const catData = catLabels.map(l => catTotals[l] || 0);
+
+      const ctxCat = document.getElementById('categoryChart').getContext('2d');
+      if (categoryChart) categoryChart.destroy();
+      categoryChart = new Chart(ctxCat, {
+        type: 'doughnut',
+        data: {
+          labels: catLabels,
+          datasets: [{
+            data: catData.every(v => v === 0) ? [1] : catData,
+            backgroundColor: catData.every(v => v === 0) ? (isDark ? ['#334155'] : ['#e2e8f0']) : ['#10b981', '#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899', '#64748b'],
+            borderWidth: 2,
+            borderColor: isDark ? '#0f172a' : '#ffffff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { color: textColor, boxWidth: 10, font: { family: 'Assistant', size: 11 } } }
+          }
+        }
+      });
+
+      const roommateTotals = {};
+      roommates.forEach(r => roommateTotals[r] = 0);
+      filteredExpenses.forEach(e => {
+        roommateTotals[e.roommate] = (roommateTotals[e.roommate] || 0) + e.amount;
+      });
+
+      const ctxRoom = document.getElementById('roommateChart').getContext('2d');
+      if (roommateChart) roommateChart.destroy();
+      roommateChart = new Chart(ctxRoom, {
+        type: 'bar',
+        data: {
+          labels: roommates,
+          datasets: [{
+            data: roommates.map(r => roommateTotals[r] || 0),
+            backgroundColor: '#059669',
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } },
+            x: { grid: { display: false }, ticks: { color: textColor } }
+          },
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+
+    function renderTable() {
+      const search = document.getElementById('search-input').value.toLowerCase();
+      const catFilter = document.getElementById('table-category-filter').value;
+      const roomFilter = document.getElementById('table-roommate-filter').value;
+      const tbody = document.getElementById('expenses-table-body');
+
+      const filtered = getFilteredExpenses().filter(e => {
+        const matchesSearch = e.description.toLowerCase().includes(search);
+        const matchesCat = catFilter === 'ALL' || e.category === catFilter;
+        const matchesRoom = roomFilter === 'ALL' || e.roommate === roomFilter;
+        return matchesSearch && matchesCat && matchesRoom;
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" class="py-8 text-center text-slate-400 dark:text-slate-500">לא נמצאו הוצאות תואמות</td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(item => `
+        <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors">
+          <td class="py-3 px-4 font-mono text-slate-500 dark:text-slate-400">${item.date}</td>
+          <td class="py-3 px-4">
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+              ${item.category}
+            </span>
+          </td>
+          <td class="py-3 px-4 text-slate-700 dark:text-slate-200 font-medium">${item.description}</td>
+          <td class="py-3 px-4 font-bold text-slate-800 dark:text-white">${item.roommate}</td>
+          <td class="py-3 px-4 text-[11px] text-slate-500 dark:text-slate-400">
+            ${item.splitWith && item.splitWith.length ? item.splitWith.join(', ') : 'כולם'}
+          </td>
+          <td class="py-3 px-4 font-extrabold text-slate-900 dark:text-white font-mono">₪${item.amount.toFixed(2)}</td>
+          <td class="py-3 px-4 text-center">
+            <div class="flex items-center justify-center gap-1.5">
+              <button onclick="openEditModal('${item.id}')" class="text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 p-1 transition-colors" title="ערוך הוצאה">
+                <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+              </button>
+              <button onclick="deleteExpense('${item.id}')" class="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 p-1 transition-colors" title="מחק הוצאה">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+      lucide.createIcons();
+    }
+
+    function openEditModal(id) {
+      const exp = expenses.find(e => e.id === id);
+      if (!exp) return;
+
+      document.getElementById('edit-id').value = exp.id;
+      document.getElementById('edit-amount').value = exp.amount;
+      document.getElementById('edit-description').value = exp.description;
+      document.getElementById('edit-date').value = exp.date;
+
+      const roommateSelect = document.getElementById('edit-roommate');
+      roommateSelect.innerHTML = roommates.map(r => `
+        <option value="${r}" ${r === exp.roommate ? 'selected' : ''}>${r}</option>
+      `).join('');
+
+      const catSelect = document.getElementById('edit-category');
+      catSelect.innerHTML = CATEGORIES.map(c => `
+        <option value="${c.id}" ${c.id === exp.category ? 'selected' : ''}>${c.name}</option>
+      `).join('');
+
+      document.getElementById('edit-expense-modal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeEditModal() {
+      document.getElementById('edit-expense-modal').classList.add('hidden');
+    }
+
+    function saveEditedExpense(e) {
+      e.preventDefault();
+      const id = document.getElementById('edit-id').value;
+      const amount = parseFloat(document.getElementById('edit-amount').value);
+      const desc = document.getElementById('edit-description').value.trim();
+      const roommate = document.getElementById('edit-roommate').value;
+      const category = document.getElementById('edit-category').value;
+      const date = document.getElementById('edit-date').value;
+
+      const idx = expenses.findIndex(x => x.id === id);
+      if (idx !== -1) {
+        expenses[idx].amount = amount;
+        expenses[idx].description = desc;
+        expenses[idx].roommate = roommate;
+        expenses[idx].category = category;
+        expenses[idx].date = date;
+
+        localStorage.setItem(STORAGE_KEY_EXPENSES, JSON.stringify(expenses));
+        closeEditModal();
+        refreshDashboard();
+        showToast('ההוצאה עודכנה בהצלחה!');
+      }
+    }
+
+    function deleteExpense(id) {
+      if (confirm('האם למחוק הוצאה זו?')) {
+        expenses = expenses.filter(e => e.id !== id);
+        localStorage.setItem(STORAGE_KEY_EXPENSES, JSON.stringify(expenses));
+        refreshDashboard();
+        showToast('ההוצאה נמחקה ונשמרה אוטומטית');
+      }
+    }
+
+    function exportToCSV() {
+      const filtered = getFilteredExpenses();
+      if (filtered.length === 0) {
+        alert('אין הוצאות לייצוא בתצוגה הנוכחית');
+        return;
+      }
+
+      let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+      csvContent += "תאריך,קטגוריה,תיאור,שותף ששילם,חלוקה,סכום\n";
+
+      filtered.forEach(e => {
+        const splitText = e.splitWith ? e.splitWith.join(';') : 'כולם';
+        const row = `"${e.date}","${e.category}","${e.description}","${e.roommate}","${splitText}",${e.amount}`;
+        csvContent += row + "\n";
+      });
+
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `הוצאות_דירה_${selectedMonth}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast('קובץ האקסל יוצא בהצלחה!');
+    }
+
+    function populateMonthFilter() {
+      const select = document.getElementById('month-filter');
+      const monthNames = {
+        '2026-05': 'חודש 05 (מאי 2026)',
+        '2026-06': 'חודש 06 (יוני 2026)',
+        '2026-07': 'חודש 07 (יולי 2026)',
+        '2026-08': 'חודש 08 (אוגוסט 2026)',
+        '2026-09': 'חודש 09 (ספטמבר 2026)'
+      };
+      const months = Array.from(new Set(expenses.map(e => e.date ? e.date.substring(0, 7) : null).filter(Boolean))).sort().reverse();
+      
+      select.innerHTML = '<option value="ALL">כל החודשים (מרוכז)</option>' + months.map(m => `
+        <option value="${m}" ${m === selectedMonth ? 'selected' : ''}>
+          ${monthNames[m] || m}
+        </option>
+      `).join('');
+    }
+
+    function changeSelectedMonth(val) {
+      selectedMonth = val;
+      refreshDashboard();
+    }
+
+    function updateTableFilterOptions() {
+      const roomSelect = document.getElementById('table-roommate-filter');
+      const catSelect = document.getElementById('table-category-filter');
+      roomSelect.innerHTML = '<option value="ALL">כל השותפים</option>' + roommates.map(r => `<option value="${r}">${r}</option>`).join('');
+      catSelect.innerHTML = '<option value="ALL">כל הקטגוריות</option>' + CATEGORIES.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    }
+
+    function openAddRoommatePrompt() {
+      const name = prompt('הזן את שם השותף/ה:');
+      if (name && name.trim()) {
+        const clean = name.trim();
+        if (!roommates.includes(clean)) {
+          roommates.push(clean);
+          localStorage.setItem(STORAGE_KEY_ROOMMATES, JSON.stringify(roommates));
+          selectRoommate(clean);
+          renderSplitParticipants();
+          updateTableFilterOptions();
+          showToast(`השותף ${clean} נוסף ונשמר!`);
+        }
+      }
+    }
+
+    function openManageRoommatesModal() {
+      const modal = document.getElementById('roommates-modal');
+      const list = document.getElementById('roommates-list-manage');
+      list.innerHTML = roommates.map(r => `
+        <div class="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
+          <button onclick="removeRoommate('${r}')" class="text-rose-500 hover:text-rose-700 text-xs font-semibold">הסר</button>
+          <span class="text-xs font-bold text-slate-800 dark:text-slate-200">${r}</span>
+        </div>
+      `).join('');
+      modal.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeManageRoommatesModal() {
+      document.getElementById('roommates-modal').classList.add('hidden');
+    }
+
+    function addRoommateFromInput() {
+      const input = document.getElementById('new-roommate-input');
+      const name = input.value.trim();
+      if (name && !roommates.includes(name)) {
+        roommates.push(name);
+        localStorage.setItem(STORAGE_KEY_ROOMMATES, JSON.stringify(roommates));
+        input.value = '';
+        renderRoommatesChips();
+        renderSplitParticipants();
+        updateTableFilterOptions();
+        openManageRoommatesModal();
+        showToast(`השותף ${name} נוסף ונשמר אוטומטית!`);
+      }
+    }
+
+    function removeRoommate(name) {
+      if (roommates.length <= 1) {
+        alert('חייב להישאר לפחות שותף אחד במערכת');
+        return;
+      }
+      if (confirm(`להסיר את ${name}?`)) {
+        roommates = roommates.filter(r => r !== name);
+        localStorage.setItem(STORAGE_KEY_ROOMMATES, JSON.stringify(roommates));
+        renderRoommatesChips();
+        renderSplitParticipants();
+        updateTableFilterOptions();
+        openManageRoommatesModal();
+        refreshDashboard();
+      }
+    }
+
+    function shareWhatsAppSummary() {
+      const filtered = getFilteredExpenses();
+      const total = filtered.reduce((s, e) => s + e.amount, 0);
+      const avg = total / (roommates.length || 1);
+      const label = selectedMonth === 'ALL' ? 'כללי' : selectedMonth;
+
+      let msg = `🏠 *סיכום הוצאות דירה (${label})*\n`;
+      msg += `💰 סה"כ הוצאות שוטפות: ₪${total.toFixed(2)}\n`;
+      msg += `👥 ממוצע לשותף: ₪${avg.toFixed(2)}\n`;
+      if (includeRent) {
+        msg += `🔑 שכר דירה קנאו: ₪1,250 (₪625 לאסף, ₪625 לאלעד)\n`;
+      }
+      msg += `\n*התחשבנות סופית (מי מעביר למי):*\n`;
+
+      if (!window.currentSettlements || window.currentSettlements.length === 0) {
+        msg += `🎉 הכל מאוזן לחלוטין!\n`;
+      } else {
+        window.currentSettlements.forEach(s => {
+          msg += `• *${s.from}* מעביר/ה ל*${s.to}*: ₪${s.amount.toFixed(2)}\n`;
+        });
+      }
+
+      msg += `\nנתונים נוספים בדשבורד המשותף!`;
+      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-message').innerText = msg;
+      toast.classList.remove('opacity-0', 'pointer-events-none');
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'pointer-events-none');
+      }, 2500);
+    }
+  </script>
+</body>
+</html>
