@@ -923,7 +923,6 @@
     const STORAGE_KEY_INCLUDE_RENT = 'flat_include_rent';
     const MONTHLY_BUDGET_CAP = 4000;
 
-    // בדיקת מצב אורח
     const isGuestMode = IS_GUEST;
 
     const ROOMMATE_EMAILS = {
@@ -1092,13 +1091,20 @@
       }
     }
 
+    // התחברות Google בשיטת Redirect היציבה
     async function executeLogin() {
       triggerHaptic('light');
-
       try {
-        const result = await auth.signInWithPopup(googleProvider);
-        const userEmail = (result.user.email || '').toLowerCase().trim();
+        await auth.signInWithRedirect(googleProvider);
+      } catch (error) {
+        alert('שגיאת התחברות: ' + error.message);
+      }
+    }
 
+    // קליטת תוצאת ההתחברות של Google לאחר החזרה לאתר
+    auth.getRedirectResult().then(result => {
+      if (result && result.user) {
+        const userEmail = (result.user.email || '').toLowerCase().trim();
         let matchedRoommate = null;
         for (const [name, email] of Object.entries(ROOMMATE_EMAILS)) {
           if (email.toLowerCase().trim() === userEmail) {
@@ -1108,7 +1114,7 @@
         }
 
         if (!matchedRoommate) {
-          await auth.signOut();
+          auth.signOut();
           alert(`החשבון (${userEmail}) אינו מורשה כשותף בדירה.`);
           return;
         }
@@ -1116,12 +1122,11 @@
         currentUser = matchedRoommate;
         localStorage.setItem(STORAGE_KEY_AUTH_USER, currentUser);
         showToast(`ברוך הבא, ${FULL_NAMES[currentUser]}!`);
-      } catch (error) {
-        if (error.code !== 'auth/popup-closed-by-user') {
-          alert('שגיאת התחברות: ' + error.message);
-        }
+        checkAuthStatus();
       }
-    }
+    }).catch(err => {
+      console.error('Redirect result error:', err);
+    });
 
     async function handleLogout() {
       if (confirm('האם להתנתק מהמערכת?')) {
