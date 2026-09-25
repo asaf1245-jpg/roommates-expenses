@@ -1,1 +1,2713 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>הוצאות שותפים - המשכירים</title>
 
+  <!-- סקריפט מוקדם: פתיחה מיידית של הדשבורד במצב אורח -->
+  <script>
+    const _urlParams = new URLSearchParams(window.location.search);
+    const IS_GUEST = _urlParams.get('mode') === 'guest' || _urlParams.get('view') === 'guest';
+    if (IS_GUEST) {
+      document.documentElement.classList.add('is-guest-mode');
+    }
+  </script>
+
+  <!-- PWA Setup -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#7a0017" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Scripts -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Assistant', 'Inter', 'sans-serif'],
+            serif: ['"Instrument Serif"', 'serif'],
+            mono: ['Rubik', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    :root {
+      --primary-color: #7a0017;
+      --secondary-color: #030002;
+      --border-accent: rgba(255, 255, 255, 0.25);
+    }
+
+    /* כפייה ב-CSS למצב אורח */
+    html.is-guest-mode #auth-screen {
+      display: none !important;
+    }
+    html.is-guest-mode #main-header,
+    html.is-guest-mode #mobile-bottom-bar,
+    html.is-guest-mode #main-content,
+    html.is-guest-mode #guest-banner {
+      display: flex !important;
+    }
+    html.is-guest-mode #main-content {
+      display: block !important;
+    }
+    html.is-guest-mode #view-add {
+      display: none !important;
+    }
+    html.is-guest-mode #view-dashboard {
+      display: block !important;
+    }
+    html.is-guest-mode #btn-tab-add,
+    html.is-guest-mode #m-tab-add,
+    html.is-guest-mode #btn-header-logout,
+    html.is-guest-mode #btn-toggle-month-settled,
+    html.is-guest-mode #btn-recurring-bills,
+    html.is-guest-mode #custom-shopping-form,
+    html.is-guest-mode #btn-clear-shopping,
+    html.is-guest-mode #btn-load-base-shopping {
+      display: none !important;
+    }
+
+    body {
+      font-family: 'Assistant', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      background-color: #000000;
+      color: #ffffff;
+      overflow-x: hidden;
+      min-height: 100vh;
+      letter-spacing: -0.01em;
+      -webkit-font-smoothing: antialiased;
+      padding-bottom: 5.5rem;
+    }
+
+    @media (min-width: 640px) {
+      body {
+        padding-bottom: 0;
+      }
+    }
+
+    body.theme-preset-asaf {
+      --primary-color: #7a0017;
+      --secondary-color: #030002;
+      --border-accent: rgba(255, 80, 100, 0.4);
+    }
+    body.theme-preset-elad {
+      --primary-color: #1d4ed8;
+      --secondary-color: #8b001d;
+      --border-accent: rgba(96, 165, 250, 0.4);
+    }
+    body.theme-preset-kanao {
+      --primary-color: #b45309;
+      --secondary-color: #064e3b;
+      --border-accent: rgba(251, 191, 36, 0.4);
+    }
+
+    .video-backdrop {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      pointer-events: none !important;
+      z-index: 0;
+      background: #000000;
+    }
+
+    #live-bg-video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.92;
+      filter: grayscale(100%) contrast(150%) brightness(0.85);
+      transform: scale(1.04);
+      will-change: transform;
+    }
+
+    .color-layer-primary {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 45% 35%, var(--primary-color) 0%, transparent 68%);
+      mix-blend-mode: screen;
+      opacity: 0.95;
+      transition: background 0.8s ease;
+      pointer-events: none;
+    }
+
+    .color-layer-secondary {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 80% 70%, var(--secondary-color) 0%, transparent 70%);
+      mix-blend-mode: multiply;
+      opacity: 0.7;
+      transition: background 0.8s ease;
+      pointer-events: none;
+    }
+
+    .video-vignette {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0.1) 25%, rgba(0, 0, 0, 0.85) 90%);
+      pointer-events: none;
+    }
+
+    .liquid-glass {
+      position: relative;
+      background: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.08) 0%,
+        rgba(255, 255, 255, 0.02) 40%,
+        rgba(255, 255, 255, 0.01) 100%
+      ) !important;
+      backdrop-filter: blur(18px) saturate(210%) !important;
+      -webkit-backdrop-filter: blur(18px) saturate(210%) !important;
+      border: 1px solid rgba(255, 255, 255, 0.15) !important;
+      border-top: 1px solid rgba(255, 255, 255, 0.5) !important;
+      border-left: 1px solid rgba(255, 255, 255, 0.28) !important;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65), inset 0 1px 1px rgba(255, 255, 255, 0.45) !important;
+      overflow: hidden;
+      transition: transform 0.25s ease, opacity 0.25s ease;
+    }
+
+    .liquid-glass::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 10%;
+      right: 10%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent);
+      pointer-events: none;
+    }
+
+    .capsule-pill {
+      background: linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.12) 0%,
+        rgba(255, 255, 255, 0.03) 100%
+      ) !important;
+      backdrop-filter: blur(20px) saturate(200%) !important;
+      -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
+      border: 1px solid rgba(255, 255, 255, 0.2) !important;
+      border-top: 1px solid rgba(255, 255, 255, 0.6) !important;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+    }
+
+    .glass-input {
+      background: rgba(0, 0, 0, 0.4) !important;
+      backdrop-filter: blur(14px) !important;
+      -webkit-backdrop-filter: blur(14px) !important;
+      border: 1px solid rgba(255, 255, 255, 0.16) !important;
+      border-top: 1px solid rgba(255, 255, 255, 0.35) !important;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    .glass-subcard {
+      background: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.06) 0%,
+        rgba(255, 255, 255, 0.015) 100%
+      ) !important;
+      backdrop-filter: blur(16px) saturate(190%) !important;
+      -webkit-backdrop-filter: blur(16px) saturate(190%) !important;
+      border: 1px solid rgba(255, 255, 255, 0.14) !important;
+      border-top: 1px solid rgba(255, 255, 255, 0.38) !important;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    }
+
+    .pill-btn-white {
+      background: #ffffff !important;
+      color: #000000 !important;
+      box-shadow: 0 4px 28px rgba(255, 255, 255, 0.45) !important;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .pill-btn-white:active {
+      transform: scale(0.97);
+    }
+
+    .pill-btn-glass {
+      background: rgba(255, 255, 255, 0.08) !important;
+      color: #ffffff !important;
+      border: 1px solid rgba(255, 255, 255, 0.22) !important;
+      border-top: 1px solid rgba(255, 255, 255, 0.45) !important;
+      backdrop-filter: blur(14px) !important;
+      transition: all 0.2s ease;
+    }
+    .pill-btn-glass:active {
+      transform: scale(0.97);
+    }
+
+    .tab-view-anim {
+      animation: fadeInSlide 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes fadeInSlide {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media print {
+      body { background: #fff !important; color: #000 !important; padding: 0 !important; }
+      .video-backdrop, header, #mobile-bottom-bar, button, #toast, form, #guest-banner { display: none !important; }
+      #view-dashboard { display: block !important; }
+      .liquid-glass, .capsule-pill { background: none !important; border: 1px solid #ccc !important; color: #000 !important; box-shadow: none !important; }
+      h2, h3, h4, span, td, th { color: #000 !important; }
+    }
+  </style>
+</head>
+<body class="theme-preset-asaf flex flex-col">
+
+  <!-- Live Background Video -->
+  <div class="video-backdrop" aria-hidden="true">
+    <video id="live-bg-video" autoplay muted loop playsinline></video>
+    <div class="color-layer-primary"></div>
+    <div class="color-layer-secondary"></div>
+    <div class="video-vignette"></div>
+  </div>
+
+  <!-- באנר מצב אורח (צפייה בלבד) -->
+  <div id="guest-banner" class="fixed top-0 inset-x-0 z-50 bg-amber-500/20 backdrop-blur-md border-b border-amber-500/30 px-4 py-2 text-center text-xs font-semibold text-amber-200 hidden justify-center items-center">
+    <span>מצב צפייה בלבד (אורח) — אין אפשרות לשנות או להוסיף נתונים.</span>
+  </div>
+
+  <!-- 1. מסך התחברות Google מאובטח -->
+  <section id="auth-screen" class="fixed inset-0 z-50 flex flex-col justify-center items-center p-6 sm:p-10 transition-opacity duration-500">
+    <div class="flex flex-col items-center justify-center text-center max-w-3xl px-4 w-full relative z-20">
+      
+      <div class="capsule-pill px-5 py-2 rounded-full flex items-center gap-3 text-xs tracking-wider mb-8 shadow-xl">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span class="text-xs font-bold tracking-wider text-slate-200">המשכירים • דירת בר אילן</span>
+      </div>
+
+      <span class="text-xs sm:text-sm font-semibold tracking-wider text-slate-200 mb-3 drop-shadow">מערכת מאובטחת</span>
+
+      <h1 class="font-serif text-5xl sm:text-7xl md:text-8xl italic font-normal tracking-tight text-white mb-6 drop-shadow-2xl">
+        Apartment Expenses
+      </h1>
+
+      <p class="text-sm sm:text-base text-slate-200 font-light max-w-lg mb-8 leading-relaxed drop-shadow">
+        ניהול, סנכרון והתחשבנות הוצאות בזמן אמת בין שותפי הדירה: אסף, אלעד וקנאו.
+      </p>
+
+      <div class="w-full max-w-xs flex flex-col items-center gap-3">
+        <button
+          type="button"
+          id="btn-google-login"
+          onclick="executeLogin()"
+          class="w-full py-4 px-6 rounded-full pill-btn-white font-bold text-xs flex items-center justify-center gap-3 cursor-pointer shadow-2xl hover:scale-105 active:scale-95 transition-all"
+        >
+          <svg class="w-4 h-4" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+          </svg>
+          <span class="tracking-wide">התחברות באמצעות Google</span>
+        </button>
+        <span class="text-[11px] text-slate-300">הכניסה מורשית לחשבונות השותפים בלבד</span>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- 2. סרגל עליון (Desktop) -->
+  <header id="main-header" class="w-full py-4 px-3 sm:px-8 flex justify-center sticky top-0 z-40 hidden">
+    <div class="capsule-pill px-4 sm:px-6 py-2 rounded-full grid grid-cols-2 sm:grid-cols-3 items-center max-w-4xl w-full">
+      <div class="flex items-center gap-2.5">
+        <button id="btn-theme-modal-trigger" onclick="openThemeSettingsModal()" class="flex items-center gap-2 border-l border-white/15 pl-3 hover:opacity-80 transition-opacity cursor-pointer group" title="הגדרות צבע והתאמה אישית">
+          <i data-lucide="palette" class="w-3.5 h-3.5 text-slate-300 group-hover:scale-110 transition-transform"></i>
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span id="current-user-fullname" class="font-serif italic text-xs text-white">שותף מחובר</span>
+        </button>
+        <button id="btn-header-logout" onclick="handleLogout()" class="text-slate-300 hover:text-rose-400 transition-colors p-1" title="התנתק מהחשבון">
+          <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+
+      <nav class="hidden sm:flex items-center justify-center gap-2">
+        <button id="btn-tab-add" onclick="switchView('add')" class="px-4 py-1.5 rounded-full text-xs font-bold transition-all pill-btn-white whitespace-nowrap">
+          הוספת הוצאה
+        </button>
+        <button id="btn-tab-dashboard" onclick="switchView('dashboard')" class="px-4 py-1.5 rounded-full text-xs font-medium text-slate-200 hover:text-white transition-all whitespace-nowrap">
+          הוצאות שותפים
+        </button>
+        <button id="btn-tab-shopping" onclick="switchView('shopping')" class="px-4 py-1.5 rounded-full text-xs font-medium text-slate-200 hover:text-white transition-all whitespace-nowrap">
+          רשימת קניות
+        </button>
+      </nav>
+
+      <div class="hidden sm:block"></div>
+    </div>
+  </header>
+
+  <!-- 3. סרגל תחתון קבוע למובייל (Sticky Bottom Bar) -->
+  <nav id="mobile-bottom-bar" class="sm:hidden fixed bottom-3 inset-x-4 z-40 capsule-pill p-1.5 rounded-full flex items-center justify-around shadow-2xl border border-white/20 hidden">
+    <button id="m-tab-add" onclick="switchView('add')" class="flex-1 py-2 rounded-full flex flex-col items-center justify-center gap-0.5 text-[11px] font-bold pill-btn-white transition-all">
+      <i data-lucide="plus-circle" class="w-4 h-4"></i>
+      <span>הוספה</span>
+    </button>
+    <button id="m-tab-dashboard" onclick="switchView('dashboard')" class="flex-1 py-2 rounded-full flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium text-slate-300 transition-all">
+      <i data-lucide="wallet" class="w-4 h-4"></i>
+      <span>הוצאות</span>
+    </button>
+    <button id="m-tab-shopping" onclick="switchView('shopping')" class="flex-1 py-2 rounded-full flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium text-slate-300 transition-all">
+      <i data-lucide="shopping-cart" class="w-4 h-4"></i>
+      <span>קניות</span>
+    </button>
+  </nav>
+
+  <!-- הודעת Toast -->
+  <div id="toast" class="fixed top-20 left-1/2 -translate-x-1/2 z-50 opacity-0 pointer-events-none transition-all duration-300">
+    <div class="capsule-pill px-6 py-2.5 rounded-full text-white text-xs font-semibold flex items-center gap-2 shadow-2xl border border-white/30">
+      <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
+      <span id="toast-message">הפעולה בוצעה בהצלחה!</span>
+    </div>
+  </div>
+
+  <!-- 4. מודאל בחירת צבעים -->
+  <div id="theme-settings-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div class="liquid-glass rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl relative border border-white/20">
+      <div class="flex items-center justify-between mb-5 pb-3 border-b border-white/10">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white">
+            <i data-lucide="palette" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white">הגדרות צבע והתאמה אישית</h3>
+            <p class="text-[11px] text-slate-300">בחר את שילוב הצבעים האישי שלך</p>
+          </div>
+        </div>
+        <button onclick="closeThemeSettingsModal()" class="text-slate-400 hover:text-white p-1 rounded-full cursor-pointer">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="space-y-2.5 mb-6" id="theme-options-container"></div>
+
+      <div class="flex gap-2">
+        <button type="button" onclick="closeThemeSettingsModal()" class="w-full py-3 pill-btn-white rounded-full font-bold text-xs cursor-pointer">
+          סגור ושמור
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. מודאל תצוגת קבלה / חשבונית מוגדלת -->
+  <div id="receipt-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden" onclick="closeReceiptModal()">
+    <div class="liquid-glass rounded-3xl max-w-lg w-full p-5 shadow-2xl border border-white/25 flex flex-col items-center" onclick="event.stopPropagation()">
+      <div class="w-full flex items-center justify-between mb-3 pb-2 border-b border-white/15">
+        <span id="receipt-title" class="text-xs font-bold text-slate-200">צילום חשבונית / קבלה</span>
+        <button onclick="closeReceiptModal()" class="text-slate-400 hover:text-white p-1">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <div class="max-h-[70vh] overflow-auto rounded-xl w-full flex justify-center bg-black/50 p-2">
+        <img id="receipt-image-view" src="" alt="קבלה" class="rounded-lg object-contain max-h-[65vh] w-auto shadow-lg" />
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. תוכן המערכת -->
+  <main id="main-content" class="flex-1 w-full p-4 sm:p-6 md:p-8 max-w-7xl mx-auto hidden relative z-20">
+
+    <!-- מסך 1: הוספת הוצאה חדשה -->
+    <section id="view-add" class="w-full max-w-4xl mx-auto space-y-6 tab-view-anim">
+      <div class="liquid-glass rounded-3xl p-6 sm:p-10 transition-all w-full">
+        <div class="text-center mb-8">
+          <h2 class="text-3xl font-extrabold text-white tracking-tight drop-shadow">הוספת הוצאה חדשה</h2>
+          <p class="text-xs text-slate-300 mt-1">כל שינוי והוצאה נשמרים ישירות בענן ומסונכרנים לכולם</p>
+        </div>
+
+        <form id="expense-form" onsubmit="handleFormSubmit(event)" class="space-y-6">
+          <div>
+            <div class="flex justify-between items-center mb-2 px-1">
+              <span class="text-[11px] text-slate-300">תומך בתרגילים (לדוגמה: 50+25.5)</span>
+              <label class="text-xs font-bold text-slate-200">סכום ההוצאה (₪)</label>
+            </div>
+            <div class="relative">
+              <span class="absolute inset-y-0 right-5 flex items-center text-3xl font-serif text-slate-400 pointer-events-none">₪</span>
+              <input
+                type="text"
+                id="amount"
+                required
+                placeholder="0.00"
+                class="w-full pr-14 pl-4 py-4 glass-input rounded-2xl text-4xl font-extrabold text-white text-center focus:outline-none focus:border-white/50 transition-all placeholder:text-slate-500 font-mono"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-200 mb-2.5 text-center">בחר קטגוריה</label>
+            <div id="category-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-2.5"></div>
+            <input type="hidden" id="selected-category" required />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-200 mb-2 text-right">השותף ששילם</label>
+            <div id="roommates-chips" class="flex flex-wrap gap-2.5 justify-end"></div>
+            <input type="hidden" id="selected-roommate" required />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-200 mb-1.5 text-right">על מי מתחלקת ההוצאה?</label>
+            <div id="split-participants-container" class="flex flex-wrap gap-2 justify-end"></div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+            <div>
+              <label class="block text-xs font-bold text-slate-200 mb-1.5 text-right">תיאור (אופציונלי)</label>
+              <input
+                type="text"
+                id="description"
+                placeholder="לדוגמה: אושר עד, סלקום..."
+                class="w-full px-4 py-3 glass-input rounded-xl text-xs text-slate-100 focus:outline-none focus:border-white/40 transition-all placeholder:text-slate-400 text-right"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-200 mb-1.5 text-right">תאריך</label>
+              <input
+                type="date"
+                id="date"
+                required
+                class="w-full px-4 py-3 glass-input rounded-xl text-xs font-semibold text-slate-100 focus:outline-none focus:border-white/40 transition-all"
+              />
+            </div>
+          </div>
+
+          <div class="p-4 rounded-2xl glass-subcard flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-slate-200">
+                <i data-lucide="receipt" class="w-4 h-4"></i>
+              </div>
+              <div class="text-right">
+                <span class="text-xs font-bold text-white block">צרף צילום קבלה / חשבונית</span>
+                <span class="text-[10px] text-slate-400">אופציונלי – יישמר ישירות בפירוט ההוצאה</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+              <label class="px-4 py-2 capsule-pill rounded-full text-xs font-semibold text-slate-200 cursor-pointer hover:bg-white/15 flex items-center gap-1.5 transition-all">
+                <i data-lucide="camera" class="w-3.5 h-3.5"></i>
+                <span id="receipt-upload-label">צלם או בחר תמונה</span>
+                <input type="file" id="receipt-input" accept="image/*" class="hidden" onchange="handleReceiptFile(this)" />
+              </label>
+              <button type="button" id="btn-remove-receipt" onclick="clearReceiptUpload()" class="p-2 text-rose-400 hover:text-rose-300 hidden" title="הסר תמונה">
+                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+          <input type="hidden" id="receipt-base64" value="" />
+
+          <button
+            type="submit"
+            class="w-full py-4 pill-btn-white rounded-full font-bold text-sm transition-all flex items-center justify-center gap-2 mt-4 cursor-pointer"
+          >
+            <i data-lucide="plus-circle" class="w-5 h-5"></i>
+            <span>הוסף הוצאה למערכת</span>
+          </button>
+        </form>
+      </div>
+
+      <!-- לוח התראות -->
+      <div class="liquid-glass rounded-3xl p-6 sm:p-8 transition-all w-full">
+        <div class="flex items-center justify-between mb-5 pb-3 border-b border-white/15">
+          <div class="flex items-center gap-2.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <h3 class="text-lg font-bold text-white drop-shadow">לוח התראות ועדכונים מהשותפים</h3>
+          </div>
+          <span class="text-[11px] text-slate-300 font-semibold">סנכרון חי בענן</span>
+        </div>
+
+        <form onsubmit="postNotification(event)" class="flex gap-2 mb-5">
+          <button type="submit" class="px-5 py-2.5 pill-btn-white rounded-full text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
+            <i data-lucide="send" class="w-3.5 h-3.5"></i>
+            פרסם התראה
+          </button>
+          <input
+            type="text"
+            id="notification-input"
+            placeholder="כתוב תזכורת או התראה לשותפים (לדוגמה: שילמתי מים, נא לקנות חלב...)"
+            required
+            class="flex-1 px-5 py-2.5 glass-input rounded-full text-xs text-white placeholder:text-slate-400 focus:outline-none text-right"
+          />
+        </form>
+
+        <div id="notifications-list" class="space-y-2.5 max-h-64 overflow-y-auto pr-1"></div>
+      </div>
+    </section>
+
+    <!-- מסך 2: הוצאות שותפים (דשבורד) -->
+    <section id="view-dashboard" class="space-y-6 hidden tab-view-anim">
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+        <div class="text-right">
+          <div class="flex items-center gap-3">
+            <h2 class="text-2xl sm:text-3xl font-bold text-white leading-tight drop-shadow">סקירה והתחשבנות כללית</h2>
+            <span id="month-lock-badge" class="hidden px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-950/80 border border-emerald-400/50 text-emerald-300 flex items-center gap-1 shadow-lg">
+              <i data-lucide="lock" class="w-3 h-3"></i> חודש סגור ושולם
+            </span>
+          </div>
+          <p class="text-xs text-slate-300 mt-1">סיכום והתחשבנות מסונכרנת בזמן אמת בין השותפים</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 self-end sm:self-auto">
+          <button id="btn-toggle-month-settled" onclick="toggleCurrentMonthSettled()" class="px-4 py-2 capsule-pill rounded-full text-xs font-bold flex items-center gap-1.5 transition-all text-slate-100 hover:text-white cursor-pointer">
+            <i id="lock-icon" data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span id="lock-btn-text">סמן חוב שולם ונעל חודש</span>
+          </button>
+
+          <button id="btn-recurring-bills" onclick="loadRecurringBills()" class="px-4 py-2 capsule-pill rounded-full text-xs font-bold flex items-center gap-1.5 hover:bg-white/20 transition-all cursor-pointer" title="טען חשבונות קבועים (ארנונה, אינטרנט, ועד)">
+            <i data-lucide="repeat" class="w-3.5 h-3.5 text-blue-400"></i>
+            חשבונות קבועים
+          </button>
+
+          <button onclick="window.print()" class="px-4 py-2 capsule-pill rounded-full text-xs font-bold flex items-center gap-1.5 hover:bg-white/20 transition-all cursor-pointer">
+            <i data-lucide="printer" class="w-3.5 h-3.5 text-slate-300"></i>
+            דו"ח PDF
+          </button>
+
+          <button onclick="exportToCSV()" class="px-4 py-2 capsule-pill rounded-full text-xs font-bold flex items-center gap-1.5 hover:bg-white/20 transition-all cursor-pointer">
+            <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5 text-emerald-400"></i>
+            אקסל
+          </button>
+
+          <select id="month-filter" onchange="changeSelectedMonth(this.value)" class="px-4 py-2 capsule-pill rounded-full text-xs font-bold text-slate-100 focus:outline-none cursor-pointer">
+          </select>
+        </div>
+      </div>
+
+      <!-- מד יעד תקציב חודשי -->
+      <div class="liquid-glass p-5 rounded-3xl border border-white/20">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <i data-lucide="target" class="w-4 h-4 text-emerald-400"></i>
+            <span class="text-xs font-bold text-white">יעד תקציב חודשי לדירה (רף: ₪4,000)</span>
+          </div>
+          <span id="budget-status-text" class="text-xs font-mono font-bold text-emerald-300">0% נוצל</span>
+        </div>
+        <div class="w-full bg-black/60 rounded-full h-3 overflow-hidden border border-white/10 p-0.5">
+          <div id="budget-progress-bar" class="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <!-- Metrics Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="liquid-glass p-6 rounded-3xl relative flex flex-col justify-between">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-xs font-bold text-slate-200">סך הוצאות הדירה</span>
+            <div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-slate-100 border border-white/20">
+              <i data-lucide="wallet" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <div class="text-right">
+            <h3 id="stat-total" class="text-3xl font-extrabold text-white tracking-tight font-mono drop-shadow">₪0.00</h3>
+            <span id="stat-count" class="text-[11px] text-slate-300 mt-1 block">0 הוצאות בחשבון הנוכחי</span>
+          </div>
+        </div>
+
+        <div class="liquid-glass p-6 rounded-3xl relative flex flex-col justify-between">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-xs font-bold text-slate-200">ממוצע לשותף</span>
+            <div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-slate-100 border border-white/20">
+              <i data-lucide="pie-chart" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <div class="text-right">
+            <h3 id="stat-average" class="text-3xl font-extrabold text-white tracking-tight font-mono drop-shadow">₪0.00</h3>
+            <span id="stat-count" class="text-[11px] text-slate-300 mt-1 block">מתחלק שווה בשווה בין כולם</span>
+          </div>
+        </div>
+
+        <div class="liquid-glass p-6 rounded-3xl relative flex flex-col justify-between">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-xs font-bold text-slate-200">שותפים בדירה</span>
+            <div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-slate-100 border border-white/20">
+              <i data-lucide="users" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <div class="text-right">
+            <h3 id="stat-roommates-count" class="text-3xl font-extrabold text-white font-mono drop-shadow">3</h3>
+            <span class="text-[11px] text-slate-300 mt-1 block font-serif">Asaf, Elad, Kanaoh</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- התחשבנות חכמה -->
+      <div class="liquid-glass rounded-3xl p-6 sm:p-8">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-white/10 border border-white/25 flex items-center justify-center text-white">
+              <i data-lucide="arrow-left-right" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h3 class="text-xl font-bold text-white drop-shadow">התחשבנות חכמה (מי משלם למי)</h3>
+              <p class="text-xs text-slate-300">חישוב אוטומטי המאזן את כל החובות במינימום העברות כספיות</p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <label class="flex items-center gap-2 text-xs font-semibold text-slate-200 capsule-pill px-4 py-2 rounded-full cursor-pointer hover:bg-white/20 transition-colors">
+              <input type="checkbox" id="toggle-rent" checked onchange="toggleRentSettlement()" class="rounded text-red-500 focus:ring-red-500 w-3.5 h-3.5" />
+              <span>כלול שכר דירה קנאו (₪1,250)</span>
+            </label>
+
+            <button onclick="shareWhatsAppSummary()" class="px-5 py-2 pill-btn-white rounded-full text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer">
+              <i data-lucide="share-2" class="w-3.5 h-3.5"></i>
+              שלח לוואטסאפ
+            </button>
+          </div>
+        </div>
+
+        <div id="settlements-container"></div>
+      </div>
+
+      <!-- גרפים -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="liquid-glass p-6 rounded-3xl flex flex-col">
+          <h4 class="text-sm font-bold text-slate-200 mb-4 text-right">התפלגות הוצאות לפי קטגוריות</h4>
+          <div class="relative flex-1 flex items-center justify-center min-h-[260px]">
+            <canvas id="categoryChart"></canvas>
+          </div>
+        </div>
+
+        <div class="liquid-glass p-6 rounded-3xl flex flex-col">
+          <h4 class="text-sm font-bold text-slate-200 mb-4 text-right">הוצאות בפועל לפי שותף</h4>
+          <div class="relative flex-1 flex items-center justify-center min-h-[260px]">
+            <canvas id="roommateChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- טבלת פירוט הוצאות -->
+      <div class="liquid-glass rounded-3xl overflow-hidden">
+        <div class="p-5 border-b border-white/15 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <h4 class="text-base font-bold text-white drop-shadow">פירוט כל ההוצאות</h4>
+
+          <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <div class="relative flex-1 sm:w-56">
+              <i data-lucide="search" class="w-3.5 h-3.5 text-slate-300 absolute right-3 top-3"></i>
+              <input
+                type="text"
+                id="search-input"
+                oninput="renderTable()"
+                placeholder="חיפוש לפי תיאור..."
+                class="w-full pl-3 pr-8 py-2 text-xs capsule-pill text-slate-100 rounded-full focus:outline-none text-right"
+              />
+            </div>
+            <select id="table-category-filter" onchange="renderTable()" class="text-xs capsule-pill text-slate-200 rounded-full px-3 py-2 focus:outline-none cursor-pointer">
+              <option value="ALL">כל הקטגוריות</option>
+            </select>
+            <select id="table-roommate-filter" onchange="renderTable()" class="text-xs capsule-pill text-slate-200 rounded-full px-3 py-2 focus:outline-none cursor-pointer">
+              <option value="ALL">כל השותפים</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-right text-xs">
+            <thead class="bg-black/30 text-slate-300 font-semibold border-b border-white/15">
+              <tr>
+                <th class="py-3 px-4">תאריך</th>
+                <th class="py-3 px-4">קטגוריה</th>
+                <th class="py-3 px-4">תיאור</th>
+                <th class="py-3 px-4">שותף</th>
+                <th class="py-3 px-4">חלוקה</th>
+                <th class="py-3 px-4">סכום</th>
+                <th class="py-3 px-4 text-center">קבלה</th>
+                <th class="py-3 px-4 text-center">פעולות</th>
+              </tr>
+            </thead>
+            <tbody id="expenses-table-body" class="divide-y divide-white/10 text-slate-200"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- מסך 3: רשימת קניות - בר אילן -->
+    <section id="view-shopping" class="w-full max-w-5xl mx-auto space-y-6 hidden tab-view-anim">
+      <div class="liquid-glass rounded-3xl p-6 sm:p-10 transition-all w-full">
+        
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
+          <div class="text-center sm:text-right">
+            <h2 class="text-3xl font-extrabold text-white tracking-tight drop-shadow">קניות - בר אילן</h2>
+            <p class="text-xs text-slate-300 mt-1">מסמנים מה שצריך לקנות. למעלה לוחצים על הפריט כדי לסמן אותו כנאסף לתוך העגלה בסופר 🛒</p>
+          </div>
+          
+          <div class="flex items-center gap-2">
+            <button id="btn-clear-shopping" onclick="clearCompletedShoppingItems()" class="px-4 py-2 capsule-pill rounded-full text-xs font-semibold text-rose-300 hover:text-rose-200 hover:bg-rose-950/40 border border-rose-400/40 transition-all flex items-center gap-1.5 cursor-pointer">
+              <i data-lucide="check-check" class="w-3.5 h-3.5"></i>
+              <span>אפס סימונים שנקנו</span>
+            </button>
+            <button id="btn-load-base-shopping" onclick="loadDefaultShoppingList()" class="px-4 py-2 pill-btn-white rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer">
+              <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+              <span>טען רשימת בסיס</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- מתחם עליון: עגלת קניות לסופר -->
+        <div id="completed-shopping-container" class="mb-8 hidden">
+          <div class="liquid-glass rounded-2xl p-5 border border-emerald-400/50 bg-emerald-950/25">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 pb-2 border-b border-emerald-400/30">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <h3 class="font-bold text-sm text-emerald-300 drop-shadow">פריטים לקנייה בסופר (לחץ על פריט שנאסף לעגלה 🛒)</h3>
+              </div>
+              <div class="flex items-center gap-3">
+                <span id="completed-count-badge" class="text-xs font-mono font-bold text-emerald-300 bg-emerald-500/25 px-2.5 py-0.5 rounded-full border border-emerald-400/50">
+                  0/0 בעגלה
+                </span>
+              </div>
+            </div>
+
+            <div class="w-full bg-black/60 rounded-full h-2.5 mb-4 overflow-hidden border border-white/10">
+              <div id="shopping-progress-bar" class="bg-gradient-to-r from-emerald-500 to-teal-300 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+
+            <div id="completed-items-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5"></div>
+          </div>
+        </div>
+
+        <!-- הוספת מוצר חדש -->
+        <form id="custom-shopping-form" onsubmit="handleCustomShoppingItem(event)" class="grid grid-cols-1 sm:grid-cols-12 gap-2.5 mb-6">
+          <input
+            type="text"
+            id="custom-shopping-name"
+            required
+            placeholder="שם המוצר..."
+            class="sm:col-span-5 px-5 py-3 glass-input rounded-full text-xs text-white placeholder:text-slate-400 focus:outline-none text-right"
+          />
+          <select id="custom-shopping-cat" class="sm:col-span-3 px-4 py-3 capsule-pill rounded-full text-xs font-semibold text-slate-200 focus:outline-none cursor-pointer">
+            <option value="ירקות">🥬 ירקות, פירות ועשבי תיבול</option>
+            <option value="חלב">🥛 מוצרי חלב ומקרר</option>
+            <option value="בשר">🥩 בשר, עוף ודגים</option>
+            <option value="לחמים">🍞 לחמים, פסטות ומוצרים יבשים</option>
+            <option value="רטבים">🧂 רטבים, תבלינים ובישול</option>
+            <option value="שתייה">🥤 שתייה וחטיפים</option>
+            <option value="ניקיון">🧻 ניקיון, כביסה ונייר</option>
+            <option value="שונות">🧴 היגיינה ושונות</option>
+          </select>
+          <div class="sm:col-span-2 flex items-center justify-center gap-2 capsule-pill rounded-full px-3 py-1.5">
+            <span class="text-[11px] text-slate-300">כמות:</span>
+            <input
+              type="number"
+              id="custom-shopping-qty"
+              min="1"
+              max="99"
+              value="1"
+              class="w-12 bg-transparent text-center text-xs font-bold font-mono text-white focus:outline-none"
+            />
+          </div>
+          <button type="submit" class="sm:col-span-2 py-3 pill-btn-white rounded-full font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span>הוסף</span>
+          </button>
+        </form>
+
+        <!-- חיפוש מהיר + הוספה קולית -->
+        <div class="relative w-full mb-6 flex items-center gap-2">
+          <div class="relative flex-1">
+            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute right-4 top-3.5"></i>
+            <input
+              type="text"
+              id="shopping-search-input"
+              oninput="renderCategorizedShopping()"
+              placeholder="חיפוש מהיר של מוצר בקטלוג..."
+              class="w-full pr-11 pl-4 py-3 glass-input rounded-full text-xs text-white placeholder:text-slate-400 focus:outline-none text-right"
+            />
+          </div>
+          <button 
+            type="button" 
+            onclick="startVoiceSearch()" 
+            id="btn-voice-search"
+            class="px-4 py-3 capsule-pill rounded-full text-xs font-bold text-emerald-300 hover:text-white flex items-center gap-1.5 transition-all cursor-pointer"
+            title="הקלטת מוצר קולית"
+          >
+            <i data-lucide="mic" class="w-4 h-4"></i>
+            <span class="hidden sm:inline">הקלטה קולית</span>
+          </button>
+        </div>
+
+        <!-- רשימה מלאה קבועה -->
+        <div id="shopping-categories-container" class="space-y-6"></div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Modal עריכה -->
+  <div id="edit-expense-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div class="liquid-glass rounded-3xl max-w-sm w-full p-6 shadow-2xl">
+      <div class="flex items-center justify-between mb-4">
+        <button onclick="closeEditModal()" class="p-1 rounded-full text-slate-300 hover:text-white cursor-pointer">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+        <h3 class="text-base font-bold text-white">עריכת הוצאה</h3>
+      </div>
+      <form id="edit-form" onsubmit="saveEditedExpense(event)" class="space-y-3">
+        <input type="hidden" id="edit-id" />
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1 text-right">סכום (₪)</label>
+          <input type="number" step="0.01" min="0.1" id="edit-amount" required class="w-full px-3 py-2 glass-input rounded-xl text-sm font-bold text-center text-white focus:outline-none" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1 text-right">תיאור</label>
+          <input type="text" id="edit-description" required class="w-full px-3 py-2 glass-input rounded-xl text-xs text-right text-white focus:outline-none" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1 text-right">שותף ששילם</label>
+          <select id="edit-roommate" class="w-full px-3 py-2 glass-input text-white rounded-xl text-xs focus:outline-none font-serif"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1 text-right">קטגוריה</label>
+          <select id="edit-category" class="w-full px-3 py-2 glass-input text-white rounded-xl text-xs focus:outline-none"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1 text-right">תאריך</label>
+          <input type="date" id="edit-date" required class="w-full px-3 py-2 glass-input text-white rounded-xl text-xs focus:outline-none" />
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button type="submit" class="flex-1 py-2.5 pill-btn-white rounded-full font-bold text-xs cursor-pointer">שמור שינויים</button>
+          <button type="button" onclick="closeEditModal()" class="px-4 py-2.5 pill-btn-glass rounded-full text-xs font-semibold cursor-pointer">ביטול</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT: LOGIC & SYNC -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    }
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAhPVtjJ_kuHD6mHPLmvcmAQHJ4aCtxCSU",
+      authDomain: "roommates-expenses-bar-ilan.firebaseapp.com",
+      projectId: "roommates-expenses-bar-ilan",
+      storageBucket: "roommates-expenses-bar-ilan.firebasestorage.app",
+      messagingSenderId: "187375672619",
+      appId: "1:187375672619:web:13c34905e4e4ef57ccb96e",
+      measurementId: "G-G93YCQZ9HK"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const googleProvider = new firebase.auth.GoogleAuthProvider();
+    const db = firebase.firestore();
+
+    const expensesCollection = db.collection('expenses');
+    const notificationsCollection = db.collection('notifications');
+    const shoppingCollection = db.collection('shoppingList_bar_ilan');
+    const settingsDoc = db.collection('settings').doc('appData');
+
+    const STORAGE_KEY_AUTH_USER = 'flat_auth_user_v12';
+    const STORAGE_KEY_INCLUDE_RENT = 'flat_include_rent';
+    const MONTHLY_BUDGET_CAP = 4000;
+
+    const isGuestMode = IS_GUEST;
+
+    const ROOMMATE_EMAILS = {
+      'אסף': 'asaf1245@gmail.com',
+      'קנאו': 'kanaoh1@gmail.com',
+      'אלעד': 'elad52525@gmail.com'
+    };
+
+    const FULL_NAMES = {
+      'אסף': 'Asaf Kehimker',
+      'אלעד': 'Elad Kehimker',
+      'קנאו': 'Kanaoh Ijigu'
+    };
+
+    const THEME_PRESETS = [
+      { id: 'asaf', name: 'ראשי: בורדו-קטיפתי | משני: שחור', primary: '#7a0017', secondary: '#030002', defaultFor: 'אסף' },
+      { id: 'elad', name: 'ראשי: כחול רויאל | משני: אדום', primary: '#1d4ed8', secondary: '#8b001d', defaultFor: 'אלעד' },
+      { id: 'kanao', name: 'ראשי: זהב חם | משני: ירוק', primary: '#b45309', secondary: '#064e3b', defaultFor: 'קנאו' }
+    ];
+
+    let userThemes = {
+      'אסף': 'asaf',
+      'אלעד': 'elad',
+      'קנאו': 'kanao'
+    };
+
+    const CATEGORIES = [
+      { id: 'סופר', name: 'סופר / קניות', icon: 'shopping-cart' },
+      { id: 'בשר', name: 'בשר', icon: 'flame' },
+      { id: 'חשבונות', name: 'חשמל / מים / ארנונה', icon: 'zap' },
+      { id: 'שיפוצים ותחזוקה', name: 'שיפוצים ותחזוקה', icon: 'wrench' },
+      { id: 'מסעדות/אוכל', name: 'מסעדות/אוכל', icon: 'utensils' },
+      { id: 'בילויים', name: 'בילויים', icon: 'sparkles' },
+      { id: 'ועד בניין', name: 'ועד בניין', icon: 'building' },
+      { id: 'שונות', name: 'שונות', icon: 'package' }
+    ];
+
+    const SHOPPING_CAT_META = {
+      'ירקות': { title: '🥬 ירקות, פירות ועשבי תיבול' },
+      'חלב': { title: '🥛 מוצרי חלב ומקרר' },
+      'בשר': { title: '🥩 בשר, עוף ודגים' },
+      'לחמים': { title: '🍞 לחמים, פסטות ומוצרים יבשים' },
+      'רטבים': { title: '🧂 רטבים, תבלינים ובישול' },
+      'שתייה': { title: '🥤 שתייה וחטיפים' },
+      'ניקיון': { title: '🧻 ניקיון, כביסה ונייר' },
+      'שונות': { title: '🧴 היגיינה ושונות' }
+    };
+
+    const SHOPPING_DEFAULTS = [
+      { cat: 'ירקות', name: 'סלרי', qty: 1 },
+      { cat: 'ירקות', name: 'בצל סגול', qty: 1 },
+      { cat: 'ירקות', name: 'חציל', qty: 1 },
+      { cat: 'ירקות', name: 'פטרוזיליה', qty: 1 },
+      { cat: 'ירקות', name: 'כרוב סגול', qty: 1 },
+      { cat: 'ירקות', name: 'לימון 🍋', qty: 1 },
+      { cat: 'ירקות', name: 'בטטה 🍠', qty: 1 },
+      { cat: 'ירקות', name: 'מלפפון 🥒', qty: 1 },
+      { cat: 'ירקות', name: 'ג׳ינג׳ר', qty: 1 },
+      { cat: 'ירקות', name: 'עגבניה 🍅', qty: 1 },
+      { cat: 'ירקות', name: 'פלפל חריף', qty: 1 },
+      { cat: 'ירקות', name: 'כוסברה', qty: 2 },
+      { cat: 'ירקות', name: 'תפוח אדמה 🥔', qty: 1 },
+      { cat: 'ירקות', name: 'בצל ירוק', qty: 1 },
+      { cat: 'ירקות', name: 'בצל לבן', qty: 6 },
+
+      { cat: 'חלב', name: 'חלב שיבולת שועל 🥛', qty: 1 },
+      { cat: 'חלב', name: 'חלב קוקוס', qty: 1 },
+      { cat: 'חלב', name: 'שמנת מתוקה צמחי', qty: 4 },
+      { cat: 'חלב', name: 'חומוס', qty: 1 },
+      { cat: 'חלב', name: 'גבינה כתומה – צ׳דר 🧀', qty: 1 },
+      { cat: 'חלב', name: 'חלב ליטר', qty: 1 },
+      { cat: 'חלב', name: 'ביצים 🥚', qty: 1 },
+      { cat: 'חלב', name: 'מעדנים', qty: 1 },
+
+      { cat: 'בשר', name: 'חזה עוף', qty: 1 },
+      { cat: 'בשר', name: 'סלומון', qty: 1 },
+      { cat: 'בשר', name: 'כבד עוף', qty: 1 },
+      { cat: 'בשר', name: 'סלמי', qty: 1 },
+      { cat: 'בשר', name: 'בשר טחון לא קפוא קילו', qty: 1 },
+      { cat: 'בשר', name: 'שניצל', qty: 1 },
+      { cat: 'בשר', name: 'לבבות', qty: 1 },
+      { cat: 'בשר', name: 'טונה', qty: 1 },
+      { cat: 'בשר', name: 'כרעיים 🍗', qty: 9 },
+
+      { cat: 'לחמים', name: 'לחם פרוס', qty: 1 },
+      { cat: 'לחמים', name: 'לחמניות המבורגר', qty: 1 },
+      { cat: 'לחמים', name: 'נודלס', qty: 1 },
+      { cat: 'לחמים', name: 'קורנפלור', qty: 1 },
+      { cat: 'לחמים', name: 'סוכר 🫙', qty: 1 },
+      { cat: 'לחמים', name: 'פירורי לחם', qty: 1 },
+      { cat: 'לחמים', name: 'אורז', qty: 1 },
+      { cat: 'לחמים', name: 'לחמניות 🥖', qty: 1 },
+      { cat: 'לחמים', name: 'עוגיות קנאו', qty: 1 },
+      { cat: 'לחמים', name: 'צ׳יפס 🍟', qty: 1 },
+
+      { cat: 'רטבים', name: 'רוטב ברביקיו', qty: 1 },
+      { cat: 'רטבים', name: 'רוטב טריאקי', qty: 1 },
+      { cat: 'רטבים', name: 'סילאן', qty: 1 },
+      { cat: 'רטבים', name: 'תמצית ורדים', qty: 1 },
+      { cat: 'רטבים', name: 'חמוצים במלח', qty: 1 },
+      { cat: 'רטבים', name: 'פלפל שחור גרוס 🧂', qty: 1 },
+      { cat: 'רטבים', name: 'תבלינים', qty: 1 },
+      { cat: 'רטבים', name: 'שמן קנולה', qty: 2 },
+      { cat: 'רטבים', name: 'קטשופ', qty: 1 },
+      { cat: 'רטבים', name: 'מיונז', qty: 1 },
+      { cat: 'רטבים', name: 'צבע מאכל אדום', qty: 1 },
+
+      { cat: 'שתייה', name: 'שתיה קלה', qty: 1 },
+      { cat: 'שתייה', name: 'יין - קידוש', qty: 1 },
+      { cat: 'שתייה', name: 'פיסטוקים 🌰', qty: 1 },
+      { cat: 'שתייה', name: 'יין - אלכוהול', qty: 1 },
+      { cat: 'שתייה', name: 'קולה', qty: 1 },
+      { cat: 'שתייה', name: 'חטיפים 🍫', qty: 1 },
+      { cat: 'שתייה', name: 'בירות קרלסברג', qty: 1 },
+
+      { cat: 'ניקיון', name: 'מרכך כביסה', qty: 1 },
+      { cat: 'ניקיון', name: 'אבקת כביסה 🧺', qty: 1 },
+      { cat: 'ניקיון', name: 'נייר סופג 🧻', qty: 1 },
+      { cat: 'ניקיון', name: 'נייר אפיה ♨️', qty: 1 },
+      { cat: 'ניקיון', name: 'ברזלית', qty: 1 },
+      { cat: 'ניקיון', name: 'G200 מסיר שומנים', qty: 1 },
+      { cat: 'ניקיון', name: 'סבון לכלים', qty: 1 },
+      { cat: 'ניקיון', name: 'נייר טואלט 🧻', qty: 1 },
+      { cat: 'ניקיון', name: 'ספריי לשירותים', qty: 1 },
+      { cat: 'ניקיון', name: 'סקוץ', qty: 1 },
+      { cat: 'ניקיון', name: 'משחות שיניים', qty: 1 },
+      { cat: 'ניקיון', name: 'שקיות זבל', qty: 1 },
+      { cat: 'ניקיון', name: 'סבון ידיים', qty: 1 },
+
+      { cat: 'שונות', name: 'שמפו H&S', qty: 1 },
+      { cat: 'שונות', name: 'סבון לגוף', qty: 1 },
+      { cat: 'שונות', name: 'קיסמי אוזניים 👂🏾', qty: 1 },
+      { cat: 'שונות', name: 'קשיות', qty: 1 },
+      { cat: 'שונות', name: 'חד פעמי צלחות', qty: 1 },
+      { cat: 'שונות', name: 'חד פעמי כוסות חמות', qty: 1 },
+      { cat: 'שונות', name: 'שעון שבת', qty: 1 },
+      { cat: 'שונות', name: 'תחליף רחצה', qty: 1 },
+      { cat: 'שונות', name: 'חד פעמי כפיות', qty: 1 },
+      { cat: 'שונות', name: 'חד פעמי מזלגות', qty: 1 },
+      { cat: 'שונות', name: 'מגב', qty: 1 }
+    ];
+
+    const roommates = ['אסף', 'אלעד', 'קנאו'];
+    let expenses = [];
+    let customMonths = [];
+    let settledMonths = {};
+    let shoppingItems = [];
+    let includeRent = localStorage.getItem(STORAGE_KEY_INCLUDE_RENT) !== 'false';
+    let currentUser = localStorage.getItem(STORAGE_KEY_AUTH_USER) || null;
+
+    function getCurrentYearMonth() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = (now.getMonth() + 1).toString().padStart(2, '0');
+      return `${year}-${month}`;
+    }
+
+    let selectedMonth = getCurrentYearMonth();
+    let categoryChart = null;
+    let roommateChart = null;
+
+    function triggerHaptic(type) {
+      if (navigator.vibrate) {
+        if (type === 'light') navigator.vibrate(20);
+        else if (type === 'success') navigator.vibrate([30, 50, 30]);
+      }
+    }
+
+    // פונקציית התחברות
+    async function executeLogin() {
+      triggerHaptic('light');
+      try {
+        await auth.signInWithRedirect(googleProvider);
+      } catch (error) {
+        alert('שגיאת התחברות: ' + error.message);
+      }
+    }
+
+    // קליטת התחברות לאחר החזרה מגוגל
+    auth.getRedirectResult().then(result => {
+      if (result && result.user) {
+        const userEmail = (result.user.email || '').toLowerCase().trim();
+        let matchedRoommate = null;
+        for (const [name, email] of Object.entries(ROOMMATE_EMAILS)) {
+          if (email.toLowerCase().trim() === userEmail) {
+            matchedRoommate = name;
+            break;
+          }
+        }
+
+        if (!matchedRoommate) {
+          auth.signOut();
+          alert(`החשבון (${userEmail}) אינו מורשה כשותף בדירה.`);
+          return;
+        }
+
+        currentUser = matchedRoommate;
+        localStorage.setItem(STORAGE_KEY_AUTH_USER, currentUser);
+        showToast(`ברוך הבא, ${FULL_NAMES[currentUser]}!`);
+        checkAuthStatus();
+      }
+    }).catch(err => {
+      console.error('Redirect result error:', err);
+    });
+
+    async function handleLogout() {
+      if (confirm('האם להתנתק מהמערכת?')) {
+        await auth.signOut();
+        localStorage.removeItem(STORAGE_KEY_AUTH_USER);
+        currentUser = null;
+        checkAuthStatus();
+      }
+    }
+
+    auth.onAuthStateChanged(user => {
+      if (isGuestMode) return;
+
+      if (user) {
+        const userEmail = (user.email || '').toLowerCase().trim();
+        for (const [name, email] of Object.entries(ROOMMATE_EMAILS)) {
+          if (email.toLowerCase().trim() === userEmail) {
+            currentUser = name;
+            localStorage.setItem(STORAGE_KEY_AUTH_USER, currentUser);
+            break;
+          }
+        }
+      } else {
+        currentUser = null;
+        localStorage.removeItem(STORAGE_KEY_AUTH_USER);
+      }
+      checkAuthStatus();
+    });
+
+    function checkAuthStatus() {
+      const authScreen = document.getElementById('auth-screen');
+      const mainHeader = document.getElementById('main-header');
+      const mobileBottomBar = document.getElementById('mobile-bottom-bar');
+      const mainContent = document.getElementById('main-content');
+      const nameBadge = document.getElementById('current-user-fullname');
+      const guestBanner = document.getElementById('guest-banner');
+
+      if (isGuestMode) {
+        if (authScreen) authScreen.classList.add('hidden');
+        if (mainHeader) mainHeader.classList.remove('hidden');
+        if (mobileBottomBar) mobileBottomBar.classList.remove('hidden');
+        if (mainContent) mainContent.classList.remove('hidden');
+        if (guestBanner) guestBanner.classList.remove('hidden');
+
+        if (nameBadge) nameBadge.innerText = 'מצב צפייה (אורח)';
+        
+        const logoutBtn = document.getElementById('btn-header-logout');
+        if (logoutBtn) logoutBtn.classList.add('hidden');
+
+        switchView('dashboard');
+        return;
+      }
+
+      if (!currentUser) {
+        if (authScreen) authScreen.classList.remove('hidden');
+        if (mainHeader) mainHeader.classList.add('hidden');
+        if (mobileBottomBar) mobileBottomBar.classList.add('hidden');
+        if (mainContent) mainContent.classList.add('hidden');
+        if (guestBanner) guestBanner.classList.add('hidden');
+      } else {
+        if (authScreen) authScreen.classList.add('hidden');
+        if (mainHeader) mainHeader.classList.remove('hidden');
+        if (mobileBottomBar) mobileBottomBar.classList.remove('hidden');
+        if (mainContent) mainContent.classList.remove('hidden');
+        if (guestBanner) guestBanner.classList.add('hidden');
+        
+        if (nameBadge) nameBadge.innerText = FULL_NAMES[currentUser] || currentUser;
+        applyGlobalTheme(currentUser);
+
+        const rmInput = document.getElementById('selected-roommate');
+        if (rmInput) rmInput.value = currentUser;
+        renderRoommatesChips();
+        switchView('add');
+      }
+    }
+
+    function openPaymentApp(targetRoommate, amount) {
+      triggerHaptic('success');
+      
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(amount.toString()).catch(() => {});
+      } else {
+        const tempInput = document.createElement("input");
+        tempInput.value = amount.toString();
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        document.execCommand("copy");
+        document.body.removeChild(tempInput);
+      }
+
+      showToast(`סכום ₪${amount} הועתק ללוח!`);
+
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      if (isMobile) {
+        window.location.href = 'bit://';
+        setTimeout(() => {
+          showToast(`הסכום הועתק! העבר ל-${FULL_NAMES[targetRoommate] || targetRoommate}`);
+        }, 1500);
+      } else {
+        alert(`העברת תשלום אל: ${FULL_NAMES[targetRoommate] || targetRoommate}\nסכום להעברה: ₪${amount}\n\n(הסכום ₪${amount} הועתק ללוח - פתח ביט בנייד והדבק!)`);
+      }
+    }
+
+    function startVoiceSearch() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        alert('הדפדפן שלך אינו תומך בהקלטה קולית.');
+        return;
+      }
+
+      triggerHaptic('light');
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'he-IL';
+      recognition.interimResults = false;
+
+      const btn = document.getElementById('btn-voice-search');
+      btn.classList.add('bg-rose-600', 'text-white');
+      showToast('מקשיב... אמור שם מוצר');
+
+      recognition.onresult = function(event) {
+        const transcript = event.results[0][0].transcript;
+        document.getElementById('shopping-search-input').value = transcript;
+        renderCategorizedShopping();
+        showToast(`נשמע: "${transcript}"`);
+      };
+
+      recognition.onend = function() {
+        btn.classList.remove('bg-rose-600', 'text-white');
+      };
+
+      recognition.onerror = function() {
+        btn.classList.remove('bg-rose-600', 'text-white');
+      };
+
+      recognition.start();
+    }
+
+    async function loadRecurringBills() {
+      if (isGuestMode) return;
+
+      if (isMonthSettled(selectedMonth)) {
+        alert('חודש זה נעול לתשלומים.');
+        return;
+      }
+
+      if (!confirm(`האם להוסיף חשבונות קבועים (ועד בית ₪150, אינטרנט ₪100) עבור חודש ${selectedMonth}?`)) return;
+
+      const dateStr = `${selectedMonth}-01`;
+      const recurring = [
+        { desc: 'ועד בית', amount: 150, cat: 'ועד בניין', roommate: 'אסף' },
+        { desc: 'אינטרנט וסלקום', amount: 100, cat: 'חשבונות', roommate: 'אלעד' }
+      ];
+
+      for (const bill of recurring) {
+        await expensesCollection.add({
+          amount: bill.amount,
+          description: bill.desc,
+          category: bill.cat,
+          roommate: bill.roommate,
+          date: dateStr,
+          splitWith: null,
+          receiptUrl: null,
+          createdAt: new Date().toISOString()
+        });
+      }
+      showToast('החשבונות הקבועים נטענו בהצלחה!');
+    }
+
+    function handleReceiptFile(input) {
+      const file = input.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.src = e.target.result;
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          const maxDim = 900;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height && width > maxDim) {
+            height *= maxDim / width;
+            width = maxDim;
+          } else if (height > maxDim) {
+            width *= maxDim / height;
+            height = maxDim;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6);
+          document.getElementById('receipt-base64').value = compressedBase64;
+          document.getElementById('receipt-upload-label').innerText = 'קבלה צורפה ✓';
+          document.getElementById('btn-remove-receipt').classList.remove('hidden');
+          showToast('הקבלה צורפה בהצלחה!');
+        };
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function clearReceiptUpload() {
+      document.getElementById('receipt-base64').value = '';
+      document.getElementById('receipt-input').value = '';
+      document.getElementById('receipt-upload-label').innerText = 'צלם או בחר תמונה';
+      document.getElementById('btn-remove-receipt').classList.add('hidden');
+    }
+
+    function openReceiptModal(imgSrc, desc) {
+      document.getElementById('receipt-image-view').src = imgSrc;
+      document.getElementById('receipt-title').innerText = `קבלה עבור: ${desc}`;
+      document.getElementById('receipt-modal').classList.remove('hidden');
+    }
+
+    function closeReceiptModal() {
+      document.getElementById('receipt-modal').classList.add('hidden');
+    }
+
+    function initLiveBackgroundVideo() {
+      const video = document.getElementById('live-bg-video');
+      const videoSrc = 'https://stream.mux.com/kimF2ha9zLrX64H00UgLGPflCzNtl1T0215MlAmeOztv8.m3u8';
+
+      video.muted = true;
+      video.playsInline = true;
+
+      try {
+        if (video.canPlayType('application/vnd.apple.mpegurl')) {
+          video.src = videoSrc;
+          video.play().catch(() => {});
+        } else if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+          const hls = new Hls({
+            enableWorker: true,
+            lowLatencyMode: true,
+            startLevel: -1,
+            capLevelToPlayerSize: false
+          });
+          hls.loadSource(videoSrc);
+          hls.attachMedia(video);
+          hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
+            if (data.levels && data.levels.length > 0) {
+              hls.currentLevel = data.levels.length - 1;
+            }
+            video.play().catch(() => {});
+          });
+        }
+      } catch (err) {
+        console.warn('Video init error:', err);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initLiveBackgroundVideo();
+      checkAuthStatus();
+      initFirebaseRealtimeSync();
+
+      const dateEl = document.getElementById('date');
+      if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
+      
+      const toggleRentEl = document.getElementById('toggle-rent');
+      if (toggleRentEl) toggleRentEl.checked = includeRent;
+
+      renderCategoryGrid();
+      renderRoommatesChips();
+      renderSplitParticipants();
+      populateMonthFilter();
+      updateTableFilterOptions();
+
+      if (shoppingItems.length === 0) {
+        shoppingItems = SHOPPING_DEFAULTS.map((item, idx) => ({
+          id: 'def_' + idx,
+          name: item.name,
+          cat: item.cat,
+          qty: item.qty,
+          done: false,
+          inCart: false
+        }));
+        renderCategorizedShopping();
+      }
+
+      if (dateEl) {
+        dateEl.addEventListener('change', (e) => {
+          const val = e.target.value;
+          if (val) registerNewMonth(val.substring(0, 7));
+        });
+      }
+
+      window.addEventListener('click', () => {
+        const video = document.getElementById('live-bg-video');
+        if (video && video.paused) video.play().catch(() => {});
+      }, { once: true });
+
+      if (isGuestMode) {
+        switchView('dashboard');
+      }
+
+      lucide.createIcons();
+    });
+
+    function initFirebaseRealtimeSync() {
+      expensesCollection.onSnapshot(snapshot => {
+        expenses = [];
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          data.id = doc.id;
+          expenses.push(data);
+        });
+        expenses.sort((a, b) => new Date(b.date) - new Date(a.date));
+        populateMonthFilter();
+        refreshDashboard();
+      }, err => console.warn('Firebase expenses sync:', err));
+
+      notificationsCollection.orderBy('timestamp', 'desc').limit(20).onSnapshot(snapshot => {
+        const list = document.getElementById('notifications-list');
+        if (!list) return;
+        if (snapshot.empty) {
+          list.innerHTML = `
+            <div class="py-6 text-center text-xs text-slate-300">
+              אין עדיין התראות בדירה. כל פעולה או תזכורת תוצג כאן אוטומטית!
+            </div>
+          `;
+          return;
+        }
+
+        list.innerHTML = snapshot.docs.map(doc => {
+          const n = doc.data();
+          const docId = doc.id;
+          const isRead = n.isRead || false;
+
+          return `
+            <div class="p-3.5 rounded-2xl glass-subcard flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs ${isRead ? 'opacity-50' : ''}">
+              <div class="flex items-center gap-3">
+                <span class="px-2.5 py-1 rounded-xl border text-[11px] font-bold text-white bg-white/10 border-white/20 whitespace-nowrap font-serif drop-shadow">
+                  ${FULL_NAMES[n.user] || n.user}
+                </span>
+                <span class="text-slate-100 font-medium ${isRead ? 'line-through text-slate-400' : ''}">
+                  ${n.text}
+                </span>
+              </div>
+
+              <div class="flex items-center gap-3 self-end sm:self-auto">
+                <span class="text-[10px] text-slate-300 font-mono flex items-center gap-1">
+                  <i data-lucide="clock" class="w-3 h-3 text-slate-400"></i>
+                  ${n.fullDate || n.time || ''}
+                </span>
+
+                ${!isGuestMode ? `
+                  <div class="flex items-center gap-1.5 border-r border-white/20 pr-2">
+                    <button onclick="toggleNotificationRead('${docId}', ${isRead})" class="p-1 text-slate-300 hover:text-emerald-400 transition-colors cursor-pointer" title="${isRead ? 'סמן כלא נקרא' : 'סמן כנקרא'}">
+                      <i data-lucide="${isRead ? 'rotate-ccw' : 'check'}" class="w-3.5 h-3.5"></i>
+                    </button>
+                    <button onclick="deleteNotification('${docId}')" class="p-1 text-slate-300 hover:text-rose-400 transition-colors cursor-pointer" title="מחק התראה">
+                      <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+          `;
+        }).join('');
+        lucide.createIcons();
+      }, err => console.warn('Firebase notifications sync:', err));
+
+      shoppingCollection.onSnapshot(snapshot => {
+        if (!snapshot.empty) {
+          shoppingItems = [];
+          snapshot.forEach(doc => {
+            const item = doc.data();
+            item.id = doc.id;
+            shoppingItems.push(item);
+          });
+          renderCategorizedShopping();
+        } else {
+          loadDefaultShoppingList(true);
+        }
+      }, err => console.warn('Firebase shopping sync:', err));
+
+      settingsDoc.onSnapshot(doc => {
+        if (doc.exists) {
+          const data = doc.data();
+          if (data.customMonths) customMonths = data.customMonths;
+          if (data.settledMonths) settledMonths = data.settledMonths;
+          if (data.userThemes) {
+            userThemes = { ...userThemes, ...data.userThemes };
+            if (currentUser) applyGlobalTheme(currentUser);
+          }
+          populateMonthFilter();
+          refreshDashboard();
+        }
+      });
+    }
+
+    function openThemeSettingsModal() {
+      if (isGuestMode) return;
+      const activeUser = currentUser || 'אסף';
+      const currentThemeId = userThemes[activeUser] || (activeUser === 'אלעד' ? 'elad' : activeUser === 'קנאו' ? 'kanao' : 'asaf');
+      const container = document.getElementById('theme-options-container');
+
+      container.innerHTML = THEME_PRESETS.map(preset => {
+        const isSelected = preset.id === currentThemeId;
+        return `
+          <button
+            type="button"
+            onclick="setUserTheme('${activeUser}', '${preset.id}')"
+            class="w-full p-3.5 rounded-2xl border transition-all flex items-center justify-between text-right cursor-pointer ${
+              isSelected 
+                ? 'pill-btn-white text-black font-bold border-transparent shadow-lg scale-[1.01]' 
+                : 'glass-subcard hover:border-white/30 text-white'
+            }"
+          >
+            <div class="flex items-center gap-3">
+              <div class="flex items-center gap-1.5 shrink-0">
+                <span class="w-5 h-5 rounded-full border border-white/20 shadow-xs" style="background-color: ${preset.primary}" title="צבע ראשי"></span>
+                <span class="w-4 h-4 rounded-full border border-white/20 shadow-xs" style="background-color: ${preset.secondary}" title="צבע משני"></span>
+              </div>
+              <span class="text-xs font-semibold">${preset.name}</span>
+            </div>
+            ${isSelected ? '<i data-lucide="check" class="w-4 h-4 text-black"></i>' : ''}
+          </button>
+        `;
+      }).join('');
+
+      document.getElementById('theme-settings-modal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeThemeSettingsModal() {
+      document.getElementById('theme-settings-modal').classList.add('hidden');
+    }
+
+    async function setUserTheme(user, themeId) {
+      if (isGuestMode) return;
+      userThemes[user] = themeId;
+      applyGlobalTheme(user);
+      openThemeSettingsModal();
+      showToast('שילוב הצבעים עודכן בהצלחה!');
+
+      try {
+        await settingsDoc.set({ userThemes: userThemes }, { merge: true });
+      } catch (err) {
+        console.warn('Theme save error:', err);
+      }
+    }
+
+    function applyGlobalTheme(roommateName) {
+      document.body.classList.remove('theme-preset-asaf', 'theme-preset-elad', 'theme-preset-kanao');
+      const chosenThemeId = userThemes[roommateName] || (roommateName === 'אלעד' ? 'elad' : roommateName === 'קנאו' ? 'kanao' : 'asaf');
+      document.body.classList.add(`theme-preset-${chosenThemeId}`);
+
+      if (categoryChart) renderCharts(getFilteredExpenses());
+      renderCategoryGrid();
+    }
+
+    function switchView(viewName) {
+      if (isGuestMode && viewName === 'add') return;
+
+      triggerHaptic('light');
+      const views = ['add', 'dashboard', 'shopping'];
+      views.forEach(v => {
+        const el = document.getElementById(`view-${v}`);
+        const btnDesktop = document.getElementById(`btn-tab-${v}`);
+        const btnMobile = document.getElementById(`m-tab-${v}`);
+
+        if (v === viewName) {
+          if (el) el.classList.remove('hidden');
+          if (btnDesktop) btnDesktop.className = "px-4 py-1.5 rounded-full text-xs font-bold transition-all pill-btn-white whitespace-nowrap cursor-pointer";
+          if (btnMobile) btnMobile.className = "flex-1 py-2 rounded-full flex flex-col items-center justify-center gap-0.5 text-[11px] font-bold pill-btn-white transition-all";
+        } else {
+          if (el) el.classList.add('hidden');
+          if (btnDesktop) btnDesktop.className = "px-4 py-1.5 rounded-full text-xs font-medium text-slate-300 hover:text-white transition-all whitespace-nowrap cursor-pointer";
+          if (btnMobile) btnMobile.className = "flex-1 py-2 rounded-full flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium text-slate-300 transition-all";
+        }
+      });
+
+      if (viewName === 'dashboard') {
+        selectedMonth = getCurrentYearMonth();
+        populateMonthFilter();
+        refreshDashboard();
+      } else if (viewName === 'shopping') {
+        renderCategorizedShopping();
+      }
+      lucide.createIcons();
+    }
+
+    function renderCategoryGrid() {
+      const container = document.getElementById('category-grid');
+      if (!container) return;
+      const hiddenInput = document.getElementById('selected-category');
+      const currentSelected = hiddenInput.value || CATEGORIES[0].id;
+      hiddenInput.value = currentSelected;
+
+      container.innerHTML = CATEGORIES.map(cat => {
+        const isSelected = cat.id === currentSelected;
+        return `
+          <button
+            type="button"
+            onclick="selectCategory('${cat.id}')"
+            class="flex flex-col items-center justify-center p-3.5 rounded-2xl border text-center transition-all cursor-pointer ${
+              isSelected
+                ? 'pill-btn-white font-bold scale-[1.02] border-transparent shadow-lg'
+                : 'glass-subcard hover:border-white/35 text-slate-200'
+            }"
+          >
+            <i data-lucide="${cat.icon}" class="w-5 h-5 mb-1 ${isSelected ? 'text-black' : 'text-slate-300'}"></i>
+            <span class="text-xs font-semibold leading-tight">${cat.name}</span>
+          </button>
+        `;
+      }).join('');
+      lucide.createIcons();
+    }
+
+    function selectCategory(id) {
+      triggerHaptic('light');
+      document.getElementById('selected-category').value = id;
+      renderCategoryGrid();
+    }
+
+    function renderRoommatesChips() {
+      const container = document.getElementById('roommates-chips');
+      if (!container) return;
+      const hiddenInput = document.getElementById('selected-roommate');
+      const currentSelected = hiddenInput.value || currentUser || roommates[0];
+      hiddenInput.value = currentSelected;
+
+      container.innerHTML = roommates.map(name => {
+        const isSelected = name === currentSelected;
+        const isMe = name === currentUser;
+
+        return `
+          <button
+            type="button"
+            onclick="selectRoommate('${name}')"
+            class="px-5 py-2.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 border font-serif cursor-pointer ${
+              isSelected
+                ? 'pill-btn-white border-transparent'
+                : 'capsule-pill text-slate-200 hover:text-white'
+            }"
+          >
+            <span>${FULL_NAMES[name] || name}</span>
+            ${isMe ? '<span class="text-[10px] opacity-80 font-sans">(אני)</span>' : ''}
+          </button>
+        `;
+      }).join('');
+    }
+
+    function selectRoommate(name) {
+      triggerHaptic('light');
+      document.getElementById('selected-roommate').value = name;
+      applyGlobalTheme(name);
+      renderRoommatesChips();
+    }
+
+    function renderSplitParticipants() {
+      const container = document.getElementById('split-participants-container');
+      if (!container) return;
+      container.innerHTML = roommates.map(name => `
+        <label class="flex items-center gap-1.5 px-4 py-2 rounded-full border border-white/20 text-xs font-semibold cursor-pointer capsule-pill hover:bg-white/20 transition-all text-slate-100">
+          <input type="checkbox" name="split-roommate" value="${name}" checked class="rounded text-red-500 focus:ring-red-500 w-3.5 h-3.5 bg-black/60 border-slate-500" />
+          <span class="font-serif">${FULL_NAMES[name] || name}</span>
+        </label>
+      `).join('');
+    }
+
+    function evaluateAmountInput(val) {
+      if (!val) return null;
+      try {
+        const sanitized = val.replace(/[^0-9+\-*/.]/g, '');
+        const evaluated = Function('"use strict";return (' + sanitized + ')')();
+        const num = parseFloat(evaluated);
+        return isNaN(num) || num <= 0 ? null : num;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    async function handleFormSubmit(e) {
+      e.preventDefault();
+      if (isGuestMode) return;
+      triggerHaptic('success');
+      const date = document.getElementById('date').value;
+      const expenseMonth = date ? date.substring(0, 7) : null;
+
+      if (expenseMonth && isMonthSettled(expenseMonth)) {
+        alert(`חודש ${expenseMonth} סגור ונעול (החוב שולם במלואו). לא ניתן להוסיף הוצאות לחודש זה!`);
+        return;
+      }
+
+      const amountRaw = document.getElementById('amount').value;
+      const amount = evaluateAmountInput(amountRaw);
+      const roommate = document.getElementById('selected-roommate').value;
+      const category = document.getElementById('selected-category').value;
+      const desc = document.getElementById('description').value.trim();
+      const receiptImg = document.getElementById('receipt-base64').value || null;
+
+      const splitCheckboxes = document.querySelectorAll('input[name="split-roommate"]:checked');
+      const splitWith = Array.from(splitCheckboxes).map(cb => cb.value);
+
+      if (!amount || amount <= 0) {
+        alert('אנא הזן סכום תקין');
+        return;
+      }
+
+      const newExpense = {
+        amount: amount,
+        roommate: roommate,
+        category: category,
+        description: desc || CATEGORIES.find(c => c.id === category)?.name || 'הוצאה',
+        date: date,
+        splitWith: splitWith.length === roommates.length ? null : splitWith,
+        receiptUrl: receiptImg,
+        createdAt: new Date().toISOString()
+      };
+
+      if (date) registerNewMonth(date.substring(0, 7));
+
+      try {
+        await expensesCollection.add(newExpense);
+        
+        const now = new Date();
+        const fullDateStr = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}, ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+        await notificationsCollection.add({
+          user: roommate,
+          text: `הוסיף/ה הוצאה חדשה: ${newExpense.description} (₪${amount.toFixed(2)})`,
+          fullDate: fullDateStr,
+          isRead: false,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        document.getElementById('amount').value = '';
+        document.getElementById('description').value = '';
+        clearReceiptUpload();
+        showToast(`₪${amount.toFixed(2)} נשמרו בענן!`);
+        switchView('dashboard');
+      } catch (err) {
+        alert('שגיאה בשמירה בענן: ' + err.message);
+      }
+    }
+
+    function registerNewMonth(ym) {
+      if (ym && !customMonths.includes(ym)) {
+        customMonths.push(ym);
+        customMonths.sort().reverse();
+        settingsDoc.set({ customMonths: customMonths }, { merge: true });
+        populateMonthFilter();
+      }
+    }
+
+    function getFilteredExpenses() {
+      if (selectedMonth === 'ALL') return expenses;
+      return expenses.filter(e => e.date && e.date.startsWith(selectedMonth));
+    }
+
+    function toggleRentSettlement() {
+      includeRent = document.getElementById('toggle-rent').checked;
+      localStorage.setItem(STORAGE_KEY_INCLUDE_RENT, includeRent);
+      refreshDashboard();
+    }
+
+    function isMonthSettled(ym) {
+      if (!ym || ym === 'ALL') return false;
+      return !!settledMonths[ym];
+    }
+
+    async function toggleCurrentMonthSettled() {
+      if (isGuestMode) return;
+
+      if (selectedMonth === 'ALL') {
+        alert('יש לבחור חודש ספציפי כדי לנעול או לסמן חוב שולם.');
+        return;
+      }
+
+      const currentStatus = isMonthSettled(selectedMonth);
+      const actionName = currentStatus ? 'לפתוח מחדש לעריכה' : 'לסמן שכל החובות שולמו ולנעול את החודש (לא יתאפשרו שינויים)';
+      
+      if (!confirm(`האם אתה בטוח שברצונך ${actionName} עבור חודש ${selectedMonth}?`)) return;
+
+      try {
+        const updated = { ...settledMonths };
+        if (currentStatus) {
+          delete updated[selectedMonth];
+        } else {
+          updated[selectedMonth] = true;
+        }
+
+        await settingsDoc.set({ settledMonths: updated }, { merge: true });
+        
+        const now = new Date();
+        const fullDateStr = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}, ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+        await notificationsCollection.add({
+          user: currentUser || 'שותף',
+          text: currentStatus ? `פתח מחדש את חודש ${selectedMonth} לעריכה.` : `סימן שכל החובות לחודש ${selectedMonth} שולמו במלואם ונעל את החודש!`,
+          fullDate: fullDateStr,
+          isRead: false,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        showToast(currentStatus ? 'החודש נפתח מחדש לעריכה!' : 'החוב סומן כשולם והחודש ננעל בהצלחה!');
+      } catch (err) {
+        alert('שגיאה בעדכון הסטטוס: ' + err.message);
+      }
+    }
+
+    function refreshDashboard() {
+      const filtered = getFilteredExpenses();
+      const total = filtered.reduce((sum, item) => sum + item.amount, 0);
+      const count = roommates.length || 1;
+      const avg = total / count;
+      const isSettled = isMonthSettled(selectedMonth);
+
+      const budgetPercent = Math.min(Math.round((total / MONTHLY_BUDGET_CAP) * 100), 100);
+      const budgetBar = document.getElementById('budget-progress-bar');
+      const budgetText = document.getElementById('budget-status-text');
+
+      if (budgetBar && budgetText) {
+        budgetBar.style.width = `${budgetPercent}%`;
+        if (total > MONTHLY_BUDGET_CAP) {
+          budgetBar.className = 'bg-gradient-to-r from-rose-600 to-red-500 h-full rounded-full transition-all duration-500';
+          budgetText.innerText = `חריגה! ₪${(total - MONTHLY_BUDGET_CAP).toFixed(0)} מעל היעד`;
+          budgetText.className = 'text-xs font-mono font-bold text-rose-400';
+        } else {
+          budgetBar.className = 'bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full transition-all duration-500';
+          budgetText.innerText = `${budgetPercent}% נוצל (נותרו ₪${(MONTHLY_BUDGET_CAP - total).toFixed(0)})`;
+          budgetText.className = 'text-xs font-mono font-bold text-emerald-300';
+        }
+      }
+
+      const lockBadge = document.getElementById('month-lock-badge');
+      const lockBtn = document.getElementById('btn-toggle-month-settled');
+      const lockText = document.getElementById('lock-btn-text');
+      const recurringBtn = document.getElementById('btn-recurring-bills');
+
+      if (isGuestMode) {
+        if (lockBtn) lockBtn.classList.add('hidden');
+        if (recurringBtn) recurringBtn.classList.add('hidden');
+      } else if (selectedMonth === 'ALL') {
+        if (lockBadge) lockBadge.classList.add('hidden');
+        if (lockBtn) lockBtn.classList.add('hidden');
+      } else {
+        if (lockBtn) lockBtn.classList.remove('hidden');
+        if (isSettled) {
+          if (lockBadge) lockBadge.classList.remove('hidden');
+          if (lockText) lockText.innerText = 'חודש נעול (לחץ לפתיחה)';
+          if (lockBtn) lockBtn.className = 'px-4 py-2 capsule-pill rounded-full text-xs font-bold flex items-center gap-1.5 transition-all text-emerald-300 border border-emerald-400/50 bg-emerald-950/40 cursor-pointer';
+        } else {
+          if (lockBadge) lockBadge.classList.add('hidden');
+          if (lockText) lockText.innerText = 'סמן חוב שולם ונעל חודש';
+          if (lockBtn) lockBtn.className = 'px-4 py-2 capsule-pill rounded-full text-xs font-bold flex items-center gap-1.5 transition-all text-slate-100 hover:text-white hover:bg-white/20 cursor-pointer';
+        }
+      }
+
+      document.getElementById('stat-total').innerText = `₪${total.toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      document.getElementById('stat-count').innerText = `${filtered.length} הוצאות בחשבון הנוכחי`;
+      document.getElementById('stat-average').innerText = `₪${avg.toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+      calculateSettlementsWithRent(filtered, isSettled);
+      renderCharts(filtered);
+      renderTable();
+    }
+
+    function calculateSettlementsWithRent(filteredExpenses, isSettled = false) {
+      const container = document.getElementById('settlements-container');
+      if (!container) return;
+
+      if (isSettled) {
+        container.innerHTML = `
+          <div class="py-6 px-6 rounded-2xl glass-subcard border border-emerald-400/50 text-emerald-300 text-xs font-bold flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-right">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-full bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center shrink-0">
+                <i data-lucide="shield-check" class="w-5 h-5 text-emerald-400"></i>
+              </div>
+              <div>
+                <span class="text-sm font-extrabold text-white block drop-shadow">חודש ${selectedMonth} נסגר – כל החובות שולמו ואופסו!</span>
+                <span class="text-[11px] text-slate-300 font-normal">החודש נעול להוצאות חדשות או שינויים כדי לשמור על היסטוריית החשבון.</span>
+              </div>
+            </div>
+            ${!isGuestMode ? `
+              <button onclick="toggleCurrentMonthSettled()" class="px-4 py-2 rounded-full pill-btn-glass text-[11px] font-semibold text-emerald-200 hover:text-white shrink-0 cursor-pointer">
+                בטל נעילת חודש
+              </button>
+            ` : ''}
+          </div>
+        `;
+        window.currentSettlements = [];
+        lucide.createIcons();
+        return;
+      }
+
+      const paidMap = {};
+      const shareMap = {};
+      roommates.forEach(r => { paidMap[r] = 0; shareMap[r] = 0; });
+
+      filteredExpenses.forEach(e => {
+        paidMap[e.roommate] = (paidMap[e.roommate] || 0) + e.amount;
+        const participants = e.splitWith && e.splitWith.length ? e.splitWith : roommates;
+        const splitShare = e.amount / participants.length;
+        participants.forEach(p => { shareMap[p] = (shareMap[p] || 0) + splitShare; });
+      });
+
+      const netBalances = {};
+      roommates.forEach(r => { netBalances[r] = (paidMap[r] || 0) - (shareMap[r] || 0); });
+
+      if (includeRent) {
+        netBalances['קנאו'] = (netBalances['קנאו'] || 0) - 1250;
+        netBalances['אסף'] = (netBalances['אסף'] || 0) + 625;
+        netBalances['אלעד'] = (netBalances['אלעד'] || 0) + 625;
+      }
+
+      const debtors = [];
+      const creditors = [];
+
+      roommates.forEach(r => {
+        const diff = netBalances[r];
+        if (diff < -0.05) debtors.push({ name: r, amount: -diff });
+        if (diff > 0.05) creditors.push({ name: r, amount: diff });
+      });
+
+      debtors.sort((a, b) => b.amount - a.amount);
+      creditors.sort((a, b) => b.amount - a.amount);
+
+      const settlements = [];
+      let d = 0, c = 0;
+      while (d < debtors.length && c < creditors.length) {
+        const settle = Math.min(debtors[d].amount, creditors[c].amount);
+        if (settle > 0.05) {
+          settlements.push({ from: debtors[d].name, to: creditors[c].name, amount: settle });
+        }
+        debtors[d].amount -= settle;
+        creditors[c].amount -= settle;
+        if (debtors[d].amount <= 0.05) d++;
+        if (creditors[c].amount <= 0.05) c++;
+      }
+
+      window.currentSettlements = settlements;
+
+      if (settlements.length === 0) {
+        container.innerHTML = `
+          <div class="py-4 px-5 rounded-2xl glass-subcard text-slate-200 text-xs font-semibold flex items-center justify-center gap-2">
+            <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
+            ההתחשבנות מאוזנת לחלוטין! אף אחד לא חייב כסף לאחר.
+          </div>
+        `;
+      } else {
+        container.innerHTML = `
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            ${settlements.map(s => {
+              const fromDot = s.from === 'אסף' ? '#ff2a44' : s.from === 'אלעד' ? '#2563eb' : '#facc15';
+              const toDot = s.to === 'אסף' ? '#ff2a44' : s.to === 'אלעד' ? '#2563eb' : '#facc15';
+
+              return `
+                <div class="p-4 rounded-2xl glass-subcard flex items-center justify-between shadow-xs">
+                  <div>
+                    <div class="flex items-center gap-2 text-xs">
+                      <span class="inline-flex items-center gap-1.5 font-extrabold text-white text-sm font-serif drop-shadow-md">
+                        <span class="w-2.5 h-2.5 rounded-full inline-block" style="background-color: ${fromDot}; box-shadow: 0 0 8px ${fromDot}"></span>
+                        ${FULL_NAMES[s.from] || s.from}
+                      </span>
+                      <span class="text-slate-300 font-medium">מעביר/ה אל</span>
+                      <span class="inline-flex items-center gap-1.5 font-extrabold text-white text-sm font-serif drop-shadow-md">
+                        <span class="w-2.5 h-2.5 rounded-full inline-block" style="background-color: ${toDot}; box-shadow: 0 0 8px ${toDot}"></span>
+                        ${FULL_NAMES[s.to] || s.to}
+                      </span>
+                    </div>
+                    <div class="flex items-center gap-2 mt-2.5">
+                      <button onclick="openPaymentApp('${s.to}', ${s.amount.toFixed(2)})" class="px-3.5 py-1.5 rounded-full pill-btn-white text-xs font-bold flex items-center gap-1 transition-all cursor-pointer">
+                        <i data-lucide="smartphone" class="w-3 h-3"></i>
+                        שלם ב-Bit / PayBox
+                      </button>
+                    </div>
+                  </div>
+                  <span class="font-black text-white text-base font-mono capsule-pill px-4 py-1.5 rounded-full border border-white/20 drop-shadow">
+                    ₪${s.amount.toFixed(2)}
+                  </span>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `;
+      }
+      lucide.createIcons();
+    }
+
+    function renderCharts(filteredExpenses) {
+      const catTotals = {};
+      CATEGORIES.forEach(c => catTotals[c.name] = 0);
+      filteredExpenses.forEach(e => {
+        const catObj = CATEGORIES.find(c => c.id === e.category);
+        const name = catObj ? catObj.name : e.category;
+        catTotals[name] = (catTotals[name] || 0) + e.amount;
+      });
+
+      const catLabels = CATEGORIES.map(c => c.name);
+      const catData = catLabels.map(l => catTotals[l] || 0);
+
+      const ctxCatEl = document.getElementById('categoryChart');
+      if (!ctxCatEl) return;
+      const ctxCat = ctxCatEl.getContext('2d');
+      if (categoryChart) categoryChart.destroy();
+      categoryChart = new Chart(ctxCat, {
+        type: 'doughnut',
+        data: {
+          labels: catLabels,
+          datasets: [{
+            data: catData.every(v => v === 0) ? [1] : catData,
+            backgroundColor: ['#10b981', '#ef4444', '#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899', '#6366f1', '#64748b'],
+            borderWidth: 2,
+            borderColor: 'rgba(255, 255, 255, 0.15)'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { color: '#e2e8f0', font: { size: 10 } } } }
+        }
+      });
+
+      const roommateTotals = {};
+      roommates.forEach(r => roommateTotals[r] = 0);
+      filteredExpenses.forEach(e => {
+        roommateTotals[e.roommate] = (roommateTotals[e.roommate] || 0) + e.amount;
+      });
+
+      const roommateColors = roommates.map(name => {
+        if (name === 'אסף') return '#ff2a44';
+        if (name === 'אלעד') return '#2563eb';
+        if (name === 'קנאו') return '#facc15';
+        return '#10b981';
+      });
+
+      const ctxRoomEl = document.getElementById('roommateChart');
+      if (!ctxRoomEl) return;
+      const ctxRoom = ctxRoomEl.getContext('2d');
+      if (roommateChart) roommateChart.destroy();
+      roommateChart = new Chart(ctxRoom, {
+        type: 'bar',
+        data: {
+          labels: roommates.map(r => FULL_NAMES[r] || r),
+          datasets: [{
+            data: roommates.map(r => roommateTotals[r] || 0),
+            backgroundColor: roommateColors,
+            borderColor: 'rgba(255, 255, 255, 0.6)',
+            borderWidth: 1.5,
+            borderRadius: 14
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { 
+              beginAtZero: true, 
+              grid: { color: 'rgba(255, 255, 255, 0.12)' }, 
+              ticks: { color: '#f1f5f9', font: { size: 11, weight: 'bold' } } 
+            },
+            x: { 
+              grid: { display: false }, 
+              ticks: { color: '#f1f5f9', font: { size: 12, weight: 'bold' } } 
+            }
+          },
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+
+    function renderTable() {
+      const search = document.getElementById('search-input')?.value?.toLowerCase() || '';
+      const catFilter = document.getElementById('table-category-filter')?.value || 'ALL';
+      const roomFilter = document.getElementById('table-roommate-filter')?.value || 'ALL';
+      const tbody = document.getElementById('expenses-table-body');
+      if (!tbody) return;
+
+      const filtered = getFilteredExpenses().filter(e => {
+        const matchesSearch = e.description.toLowerCase().includes(search);
+        const matchesCat = catFilter === 'ALL' || e.category === catFilter;
+        const matchesRoom = roomFilter === 'ALL' || e.roommate === roomFilter;
+        return matchesSearch && matchesCat && matchesRoom;
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-slate-300">לא נמצאו הוצאות תואמות</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(item => {
+        const dotCol = item.roommate === 'אסף' ? '#ff2a44' : item.roommate === 'אלעד' ? '#2563eb' : '#facc15';
+        const itemMonth = item.date ? item.date.substring(0, 7) : null;
+        const itemLocked = isMonthSettled(itemMonth);
+        const canModify = !isGuestMode && (item.roommate === currentUser);
+
+        return `
+          <tr class="hover:bg-white/10 transition-colors">
+            <td class="py-3.5 px-4 font-mono text-slate-300">${item.date}</td>
+            <td class="py-3.5 px-4">
+              <span class="px-3 py-1 rounded-full text-[10px] font-semibold bg-white/10 text-slate-100 border border-white/20">
+                ${item.category}
+              </span>
+            </td>
+            <td class="py-3.5 px-4 text-white font-medium drop-shadow">${item.description}</td>
+            <td class="py-3.5 px-4 font-serif font-bold text-white drop-shadow">
+              <span class="inline-flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full inline-block" style="background-color: ${dotCol}; box-shadow: 0 0 6px ${dotCol}"></span>
+                ${FULL_NAMES[item.roommate] || item.roommate}
+              </span>
+            </td>
+            <td class="py-3.5 px-4 text-[11px] text-slate-300">
+              ${item.splitWith && item.splitWith.length ? item.splitWith.map(r => FULL_NAMES[r] || r).join(', ') : 'כולם'}
+            </td>
+            <td class="py-3.5 px-4 font-black text-white font-mono drop-shadow">₪${item.amount.toFixed(2)}</td>
+            <td class="py-3.5 px-4 text-center">
+              ${item.receiptUrl ? `
+                <button onclick="openReceiptModal('${item.receiptUrl}', '${item.description}')" class="p-1.5 rounded-lg bg-white/10 hover:bg-white/25 text-emerald-300 transition-all cursor-pointer" title="הצג קבלה">
+                  <i data-lucide="image" class="w-3.5 h-3.5"></i>
+                </button>
+              ` : `
+                <span class="text-slate-600 text-[10px]">-</span>
+              `}
+            </td>
+            <td class="py-3.5 px-4 text-center">
+              ${itemLocked ? `
+                <span class="text-slate-300 text-[11px] font-semibold flex items-center justify-center gap-1" title="החודש נעול ולא ניתן לשינוי">
+                  <i data-lucide="lock" class="w-3.5 h-3.5"></i> נעול
+                </span>
+              ` : canModify ? `
+                <div class="flex items-center justify-center gap-1.5">
+                  <button onclick="openEditModal('${item.id}')" class="text-slate-300 hover:text-emerald-400 p-1 transition-colors cursor-pointer" title="ערוך הוצאה">
+                    <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                  </button>
+                  <button onclick="deleteExpense('${item.id}')" class="text-slate-300 hover:text-rose-400 p-1 transition-colors cursor-pointer" title="מחק הוצאה">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                  </button>
+                </div>
+              ` : `
+                <span class="text-slate-500 text-[11px]" title="${isGuestMode ? 'מצב צפייה בלבד' : 'עריכה אפשרית רק למי שהזין את ההוצאה'}">-</span>
+              `}
+            </td>
+          </tr>
+        `;
+      }).join('');
+      lucide.createIcons();
+    }
+
+    function openEditModal(id) {
+      if (isGuestMode) return;
+      const exp = expenses.find(e => e.id === id);
+      if (!exp) return;
+
+      const expMonth = exp.date ? exp.date.substring(0, 7) : null;
+      if (isMonthSettled(expMonth)) {
+        alert('לא ניתן לערוך הוצאה זו מכיוון שהחודש שלה נעול וסומן כשולם.');
+        return;
+      }
+
+      document.getElementById('edit-id').value = exp.id;
+      document.getElementById('edit-amount').value = exp.amount;
+      document.getElementById('edit-description').value = exp.description;
+      document.getElementById('edit-date').value = exp.date;
+
+      document.getElementById('edit-roommate').innerHTML = roommates.map(r => `
+        <option value="${r}" ${r === exp.roommate ? 'selected' : ''}>${FULL_NAMES[r] || r}</option>
+      `).join('');
+
+      document.getElementById('edit-category').innerHTML = CATEGORIES.map(c => `
+        <option value="${c.id}" ${c.id === exp.category ? 'selected' : ''}>${c.name}</option>
+      `).join('');
+
+      document.getElementById('edit-expense-modal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeEditModal() {
+      document.getElementById('edit-expense-modal').classList.add('hidden');
+    }
+
+    async function saveEditedExpense(e) {
+      e.preventDefault();
+      if (isGuestMode) return;
+      const id = document.getElementById('edit-id').value;
+      const newDate = document.getElementById('edit-date').value;
+      const newMonth = newDate ? newDate.substring(0, 7) : null;
+
+      if (isMonthSettled(newMonth)) {
+        alert('לא ניתן להעביר הוצאה לחודש שנעול וסגור.');
+        return;
+      }
+
+      try {
+        await expensesCollection.doc(id).update({
+          amount: parseFloat(document.getElementById('edit-amount').value),
+          description: document.getElementById('edit-description').value.trim(),
+          roommate: document.getElementById('edit-roommate').value,
+          category: document.getElementById('edit-category').value,
+          date: newDate
+        });
+        closeEditModal();
+        showToast('ההוצאה עודכנה בענן בהצלחה!');
+      } catch (err) {
+        alert('שגיאה בעדכון בענן: ' + err.message);
+      }
+    }
+
+    async function deleteExpense(id) {
+      if (isGuestMode) return;
+      const exp = expenses.find(e => e.id === id);
+      const expMonth = exp && exp.date ? exp.date.substring(0, 7) : null;
+
+      if (isMonthSettled(expMonth)) {
+        alert('לא ניתן למחוק הוצאה מחודש שנעול וסגור.');
+        return;
+      }
+
+      if (confirm('האם למחוק הוצאה זו מהענן?')) {
+        try {
+          await expensesCollection.doc(id).delete();
+          showToast('ההוצאה נמחקה מהענן');
+        } catch (err) {
+          alert('שגיאה במחיקה: ' + err.message);
+        }
+      }
+    }
+
+    function exportToCSV() {
+      const filtered = getFilteredExpenses();
+      if (filtered.length === 0) return alert('אין הוצאות לייצוא');
+
+      let csvRows = ["תאריך,קטגוריה,תיאור,שותף ששילם,חלוקה,סכום"];
+      filtered.forEach(e => {
+        const splitText = e.splitWith ? e.splitWith.map(r => FULL_NAMES[r] || r).join(';') : 'כולם';
+        csvRows.push(`"${e.date}","${e.category}","${e.description}","${FULL_NAMES[e.roommate] || e.roommate}","${splitText}",${e.amount}`);
+      });
+
+      const csvString = csvRows.join('\n');
+      const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", `הוצאות_דירה_${selectedMonth}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast('קובץ האקסל יוצא בהצלחה!');
+    }
+
+    function populateMonthFilter() {
+      const select = document.getElementById('month-filter');
+      if (!select) return;
+      const fromExpenses = expenses.map(e => e.date ? e.date.substring(0, 7) : null).filter(Boolean);
+      const currentYM = getCurrentYearMonth();
+      
+      const combined = Array.from(new Set([currentYM, ...fromExpenses, ...customMonths])).sort().reverse();
+      
+      select.innerHTML = '<option value="ALL">כל החודשים</option>' + combined.map(m => {
+        const lockedMark = isMonthSettled(m) ? ' 🔒 (שולם)' : '';
+        return `<option value="${m}" ${m === selectedMonth ? 'selected' : ''}>חודש ${m}${lockedMark}</option>`;
+      }).join('');
+    }
+
+    function changeSelectedMonth(val) {
+      selectedMonth = val;
+      refreshDashboard();
+    }
+
+    function updateTableFilterOptions() {
+      const rFilter = document.getElementById('table-roommate-filter');
+      const cFilter = document.getElementById('table-category-filter');
+      if (rFilter) rFilter.innerHTML = '<option value="ALL">כל השותפים</option>' + roommates.map(r => `<option value="${r}">${FULL_NAMES[r] || r}</option>`).join('');
+      if (cFilter) cFilter.innerHTML = '<option value="ALL">כל הקטגוריות</option>' + CATEGORIES.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    }
+
+    function shareWhatsAppSummary() {
+      const filtered = getFilteredExpenses();
+      const total = filtered.reduce((s, e) => s + e.amount, 0);
+      const avg = total / (roommates.length || 1);
+      const label = selectedMonth === 'ALL' ? 'כללי' : selectedMonth;
+      const isSettled = isMonthSettled(selectedMonth);
+
+      let msg = `🏠 *הוצאות שותפים (${label})*\n`;
+      if (isSettled) {
+        msg += `✅ *החודש נסגר וכל החובות שולמו במלואם!*\n`;
+      }
+      msg += `💰 סה"כ הוצאות שוטפות: ₪${total.toFixed(2)}\n`;
+      msg += `👥 ממוצע לשותף: ₪${avg.toFixed(2)}\n`;
+      if (includeRent) {
+        msg += `🔑 שכר דירה קנאו: ₪1,250 (₪625 לאסף, ₪625 לאלעד)\n`;
+      }
+      msg += `\n*התחשבנות סופית (מי מעביר למי):*\n`;
+
+      if (isSettled || !window.currentSettlements || window.currentSettlements.length === 0) {
+        msg += `🎉 הכל מאוזן ושולם לחלוטין!\n`;
+      } else {
+        window.currentSettlements.forEach(s => {
+          msg += `• *${FULL_NAMES[s.from] || s.from}* מעביר/ה ל*${FULL_NAMES[s.to] || s.to}*: ₪${s.amount.toFixed(2)}\n`;
+        });
+      }
+
+      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      if (!toast) return;
+      document.getElementById('toast-message').innerText = msg;
+      toast.classList.remove('opacity-0', 'pointer-events-none');
+      setTimeout(() => toast.classList.add('opacity-0', 'pointer-events-none'), 2200);
+    }
+
+    function sortAlphabetically(items) {
+      return items.slice().sort((a, b) => a.name.localeCompare(b.name, 'he'));
+    }
+
+    function renderCategorizedShopping() {
+      const topContainer = document.getElementById('completed-shopping-container');
+      const topGrid = document.getElementById('completed-items-grid');
+      const topBadge = document.getElementById('completed-count-badge');
+      const progressBar = document.getElementById('shopping-progress-bar');
+      const catContainer = document.getElementById('shopping-categories-container');
+      const searchQuery = (document.getElementById('shopping-search-input')?.value || '').trim().toLowerCase();
+
+      if (!topContainer || !catContainer) return;
+
+      const selectedForBuy = sortAlphabetically(shoppingItems.filter(i => i.done));
+      
+      if (selectedForBuy.length > 0) {
+        topContainer.classList.remove('hidden');
+        const inCartCount = selectedForBuy.filter(i => i.inCart).length;
+        const percent = Math.round((inCartCount / selectedForBuy.length) * 100);
+        
+        if (topBadge) topBadge.innerText = `${inCartCount}/${selectedForBuy.length} בעגלה (${percent}%) 🛒`;
+        if (progressBar) progressBar.style.width = `${percent}%`;
+
+        if (topGrid) {
+          topGrid.innerHTML = selectedForBuy.map(item => {
+            const isCart = item.inCart || false;
+
+            return `
+              <div 
+                onclick="${!isGuestMode ? `toggleItemInCart('${item.id}',${isCart})` : ''}"
+                class="px-3.5 py-2.5 rounded-xl glass-subcard flex items-center justify-between gap-2 text-xs ${!isGuestMode ? 'cursor-pointer' : ''} transition-all ${
+                  isCart 
+                    ? 'border-emerald-400/80 bg-emerald-950/40 shadow-inner' 
+                    : 'hover:border-white/30'
+                }"
+                title="${!isGuestMode ? 'לחץ כדי לסמן שהפריט נכנס לעגלה בסופר 🛒' : ''}"
+              >
+                <div class="flex items-center gap-2.5 overflow-hidden">
+                  <div class="w-4 h-4 rounded-md flex items-center justify-center shrink-0 border ${
+                    isCart ? 'bg-emerald-500 border-emerald-400 text-black' : 'border-white/30 bg-black/40'
+                  }">
+                    ${isCart ? '<i data-lucide="shopping-bag" class="w-2.5 h-2.5 stroke-[3]"></i>' : ''}
+                  </div>
+                  <span class="font-bold truncate select-none ${
+                    isCart ? 'line-through text-emerald-300/80 opacity-75' : 'text-emerald-300'
+                  }">
+                    ${item.name}
+                  </span>
+                  ${isCart ? '<span class="text-[10px] text-emerald-400 font-normal shrink-0">(בעגלה)</span>' : ''}
+                </div>
+
+                <div class="flex items-center gap-2 shrink-0" onclick="event.stopPropagation()">
+                  <span class="text-[11px] font-mono px-2 py-0.5 rounded-md bg-emerald-950/80 border border-emerald-400/50 text-emerald-300 font-bold">
+                    x${item.qty || 1}
+                  </span>
+                  ${!isGuestMode ? `
+                    <button 
+                      onclick="removeFromShoppingTopList('${item.id}')" 
+                      class="text-slate-300 hover:text-rose-400 p-1 transition-colors cursor-pointer" 
+                      title="הסר מרשימת הקניות העליונה"
+                    >
+                      <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    </button>
+                  ` : ''}
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+      } else {
+        topContainer.classList.add('hidden');
+      }
+
+      const cats = Object.keys(SHOPPING_CAT_META);
+      catContainer.innerHTML = cats.map(catKey => {
+        let catAllItems = sortAlphabetically(shoppingItems.filter(i => (i.cat || 'שונות') === catKey));
+        
+        if (searchQuery) {
+          catAllItems = catAllItems.filter(i => i.name.toLowerCase().includes(searchQuery));
+        }
+
+        if (catAllItems.length === 0) return '';
+        const activeInCatCount = catAllItems.filter(i => i.done).length;
+
+        return `
+          <div class="liquid-glass rounded-2xl p-5">
+            <div class="flex items-center justify-between mb-3 pb-2 border-b border-white/15">
+              <h3 class="font-bold text-sm text-white drop-shadow">${SHOPPING_CAT_META[catKey].title}</h3>
+              <span class="text-[11px] text-slate-300 font-mono">${activeInCatCount} נבחרו מתוך ${catAllItems.length}</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+              ${catAllItems.map(item => `
+                <div class="px-3.5 py-2.5 rounded-xl glass-subcard transition-all flex items-center justify-between gap-2 text-xs ${
+                  item.done 
+                    ? 'border-emerald-400/60 bg-emerald-950/20' 
+                    : 'hover:border-white/35'
+                }">
+                  <div class="flex items-center gap-2.5 overflow-hidden">
+                    <input
+                      type="checkbox"
+                      ${item.done ? 'checked' : ''}
+                      ${isGuestMode ? 'disabled' : ''}
+                      onchange="toggleShoppingItemDone('${item.id}',${item.done})"
+                      class="rounded text-emerald-500 focus:ring-emerald-500 w-4 h-4 bg-black/60 border-slate-500 ${!isGuestMode ? 'cursor-pointer' : ''}"
+                    />
+                    <span class="font-medium truncate ${item.done ? 'text-emerald-300 font-bold' : 'text-slate-100'}">
+                      ${item.name}
+                    </span>
+                  </div>
+
+                  <div class="flex items-center gap-1.5 shrink-0">
+                    <div class="flex items-center gap-1 bg-white/10 border border-white/20 rounded-lg px-1.5 py-0.5">
+                      ${!isGuestMode ? `
+                        <button type="button" onclick="updateItemQty('${item.id}', ${(item.qty || 1) - 1})" class="text-slate-200 hover:text-white px-1 font-bold cursor-pointer">-</button>
+                      ` : ''}
+                      <span class="text-[11px] font-mono font-bold text-white min-w-[14px] text-center">${item.qty || 1}</span>${!isGuestMode ? `
+                        <button type="button" onclick="updateItemQty('${item.id}', ${(item.qty || 1) + 1})" class="text-slate-200 hover:text-white px-1 font-bold cursor-pointer">+</button>
+                      ` : ''}
+                    </div>
+
+                    ${!isGuestMode ? `
+                      <button onclick="deleteShoppingItem('${item.id}')" class="text-slate-400 hover:text-rose-400 p-1 transition-colors cursor-pointer" title="מחק מוצר לחלוטין">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                      </button>
+                    ` : ''}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+      lucide.createIcons();
+    }
+
+    async function toggleItemInCart(id, currentInCart) {
+      if (isGuestMode) return;
+      triggerHaptic('light');
+      try {
+        if (!id.startsWith('def_') && !id.startsWith('custom_')) {
+          await shoppingCollection.doc(id).update({ inCart: !currentInCart });
+        }
+      } catch (err) {
+        console.warn(err);
+      }
+
+      const item = shoppingItems.find(i => i.id === id);
+      if (item) {
+        item.inCart = !currentInCart;
+        renderCategorizedShopping();
+      }
+    }
+
+    async function removeFromShoppingTopList(id) {
+      if (isGuestMode) return;
+      triggerHaptic('light');
+      try {
+        if (!id.startsWith('def_') && !id.startsWith('custom_')) {
+          await shoppingCollection.doc(id).update({ done: false, inCart: false });
+        }
+      } catch (err) {
+        console.warn(err);
+      }
+
+      const item = shoppingItems.find(i => i.id === id);
+      if (item) {
+        item.done = false;
+        item.inCart = false;
+        renderCategorizedShopping();
+      }
+    }
+
+    async function handleCustomShoppingItem(e) {
+      e.preventDefault();
+      if (isGuestMode) return;
+      triggerHaptic('light');
+      const input = document.getElementById('custom-shopping-name');
+      const cat = document.getElementById('custom-shopping-cat').value;
+      const qty = parseInt(document.getElementById('custom-shopping-qty').value, 10) || 1;
+      const name = input.value.trim();
+      if (!name) return;
+
+      const normalizedNewName = name.replace(/\s+/g, ' ').toLowerCase();
+      const isDuplicate = shoppingItems.some(i => i.name.trim().replace(/\s+/g, ' ').toLowerCase() === normalizedNewName);
+
+      if (isDuplicate) {
+        alert(`המוצר "${name}" כבר קיים ברשימה! ניתן לשנות את הכמות שלו ישירות.`);
+        return;
+      }
+
+      try {
+        await shoppingCollection.add({
+          name: name,
+          cat: cat,
+          qty: qty,
+          done: false,
+          inCart: false,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        input.value = '';
+        document.getElementById('custom-shopping-qty').value = '1';
+        showToast(`"${name}" נוסף בהצלחה לקטלוג!`);
+      } catch (err) {
+        shoppingItems.push({
+          id: 'custom_' + Date.now(),
+          name: name,
+          cat: cat,
+          qty: qty,
+          done: false,
+          inCart: false
+        });
+        renderCategorizedShopping();
+        input.value = '';
+        showToast(`"${name}" נוסף לקטלוג המקומי!`);
+      }
+    }
+
+    async function updateItemQty(id, newQty) {
+      if (isGuestMode) return;
+      triggerHaptic('light');
+      if (newQty < 1) {
+        if (confirm('האם למחוק פריט זה לחלוטין מהקטלוג?')) {
+          deleteShoppingItem(id);
+        }
+        return;
+      }
+      try {
+        await shoppingCollection.doc(id).update({ qty: newQty });
+      } catch (err) {
+        const item = shoppingItems.find(i => i.id === id);
+        if (item) {
+          item.qty = newQty;
+          renderCategorizedShopping();
+        }
+      }
+    }
+
+    async function toggleShoppingItemDone(id, currentStatus) {
+      if (isGuestMode) return;
+      triggerHaptic('light');
+      try {
+        await shoppingCollection.doc(id).update({ done: !currentStatus, inCart: false });
+      } catch (err) {
+        const item = shoppingItems.find(i => i.id === id);
+        if (item) {
+          item.done = !currentStatus;
+          item.inCart = false;
+          renderCategorizedShopping();
+        }
+      }
+    }
+
+    async function deleteShoppingItem(id) {
+      if (isGuestMode) return;
+      if (!confirm('האם למחוק פריט זה לחלוטין מהרשימה?')) return;
+      try {
+        await shoppingCollection.doc(id).delete();
+      } catch (err) {
+        shoppingItems = shoppingItems.filter(i => i.id !== id);
+        renderCategorizedShopping();
+      }
+    }
+
+    async function clearCompletedShoppingItems() {
+      if (isGuestMode) return;
+      const completed = shoppingItems.filter(i => i.done);
+      if (completed.length === 0) return alert('אין פריטים שסומנו לקנייה.');
+      if (!confirm(`האם לאפס את הסימון של ${completed.length} פריטים שנקנו? (הפריטים יישארו ברשימה המלאה)`)) return;
+
+      try {
+        const batch = db.batch();
+        completed.forEach(i => {
+          if (!i.id.startsWith('def_')) {
+            batch.update(shoppingCollection.doc(i.id), { done: false, inCart: false });
+          }
+        });
+        await batch.commit();
+      } catch (err) {
+        console.warn('Batch reset:', err);
+      }
+
+      shoppingItems.forEach(i => {
+        i.done = false;
+        i.inCart = false;
+      });
+      renderCategorizedShopping();
+      showToast('הסימונים אופסו בהצלחה!');
+    }
+
+    async function loadDefaultShoppingList(silent = false) {
+      if (isGuestMode) return;
+      if (!silent && !confirm('האם לטעון מחדש את רשימת הקניות המקורית של הדירה (מנקה כפילויות קיימות)?')) return;
+      try {
+        const batch = db.batch();
+        const existingDocs = await shoppingCollection.get();
+        existingDocs.forEach(d => batch.delete(d.ref));
+
+        SHOPPING_DEFAULTS.forEach(item => {
+          const newDoc = shoppingCollection.doc();
+          batch.set(newDoc, {
+            name: item.name.trim(),
+            cat: item.cat,
+            qty: item.qty || 1,
+            done: false,
+            inCart: false,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        });
+        await batch.commit();
+        if (!silent) showToast('רשימת הקניות של בר אילן סודרה מחדש בענן!');
+      } catch (err) {
+        shoppingItems = SHOPPING_DEFAULTS.map((item, idx) => ({
+          id: 'def_' + idx,
+          name: item.name,
+          cat: item.cat,
+          qty: item.qty,
+          done: false,
+          inCart: false
+        }));
+        renderCategorizedShopping();
+        if (!silent) showToast('רשימת הקניות נטענה מקומית בהצלחה!');
+      }
+    }
+
+    async function postNotification(e) {
+      e.preventDefault();
+      if (isGuestMode) return;
+      triggerHaptic('light');
+      const input = document.getElementById('notification-input');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const now = new Date();
+      const fullDateStr = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}, ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+      try {
+        await notificationsCollection.add({
+          user: currentUser || 'שותף',
+          text: text,
+          fullDate: fullDateStr,
+          isRead: false,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        input.value = '';
+        showToast('ההתראה פורסמה לכל השותפים!');
+      } catch (err) {
+        alert('שגיאה בפרסום: ' + err.message);
+      }
+    }
+
+    async function toggleNotificationRead(id, currentStatus) {
+      if (isGuestMode) return;
+      try {
+        await notificationsCollection.doc(id).update({ isRead: !currentStatus });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function deleteNotification(id) {
+      if (isGuestMode) return;
+      if (confirm('האם למחוק התראה זו?')) {
+        try {
+          await notificationsCollection.doc(id).delete();
+          showToast('ההתראה נמחקה');
+        } catch (err) {
+          alert('שגיאה במחיקה: ' + err.message);
+        }
+      }
+    }
+  </script>
+</body>
+</html>
