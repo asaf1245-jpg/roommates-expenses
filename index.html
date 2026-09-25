@@ -5,6 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>הוצאות שותפים - המשכירים</title>
 
+  <!-- סקריפט מוקדם: פתיחה מיידית של הדשבורד במצב אורח -->
+  <script>
+    const _urlParams = new URLSearchParams(window.location.search);
+    const IS_GUEST = _urlParams.get('mode') === 'guest' || _urlParams.get('view') === 'guest';
+    if (IS_GUEST) {
+      document.documentElement.classList.add('is-guest-mode');
+    }
+  </script>
+
   <!-- PWA Setup -->
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#7a0017" />
@@ -47,6 +56,36 @@
       --primary-color: #7a0017;
       --secondary-color: #030002;
       --border-accent: rgba(255, 255, 255, 0.25);
+    }
+
+    /* כפייה ב-CSS למצב אורח */
+    html.is-guest-mode #auth-screen {
+      display: none !important;
+    }
+    html.is-guest-mode #main-header,
+    html.is-guest-mode #mobile-bottom-bar,
+    html.is-guest-mode #main-content,
+    html.is-guest-mode #guest-banner {
+      display: flex !important;
+    }
+    html.is-guest-mode #main-content {
+      display: block !important;
+    }
+    html.is-guest-mode #view-add {
+      display: none !important;
+    }
+    html.is-guest-mode #view-dashboard {
+      display: block !important;
+    }
+    html.is-guest-mode #btn-tab-add,
+    html.is-guest-mode #m-tab-add,
+    html.is-guest-mode #btn-header-logout,
+    html.is-guest-mode #btn-toggle-month-settled,
+    html.is-guest-mode #btn-recurring-bills,
+    html.is-guest-mode #custom-shopping-form,
+    html.is-guest-mode #btn-clear-shopping,
+    html.is-guest-mode #btn-load-base-shopping {
+      display: none !important;
     }
 
     body {
@@ -248,7 +287,7 @@
   </div>
 
   <!-- באנר מצב אורח (צפייה בלבד) -->
-  <div id="guest-banner" class="fixed top-0 inset-x-0 z-50 bg-amber-500/20 backdrop-blur-md border-b border-amber-500/30 px-4 py-2 text-center text-xs font-semibold text-amber-200 hidden">
+  <div id="guest-banner" class="fixed top-0 inset-x-0 z-50 bg-amber-500/20 backdrop-blur-md border-b border-amber-500/30 px-4 py-2 text-center text-xs font-semibold text-amber-200 hidden justify-center items-center">
     <span>מצב צפייה בלבד (אורח) — אין אפשרות לשנות או להוסיף נתונים.</span>
   </div>
 
@@ -455,7 +494,6 @@
             </div>
           </div>
 
-          <!-- העלאת צילום קבלה ישיר -->
           <div class="p-4 rounded-2xl glass-subcard flex flex-col sm:flex-row items-center justify-between gap-3">
             <div class="flex items-center gap-2.5">
               <div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-slate-200">
@@ -556,7 +594,7 @@
         </div>
       </div>
 
-      <!-- מד יעד תקציב חודשי (Budget Cap) -->
+      <!-- מד יעד תקציב חודשי -->
       <div class="liquid-glass p-5 rounded-3xl border border-white/20">
         <div class="flex items-center justify-between mb-2">
           <div class="flex items-center gap-2">
@@ -740,7 +778,6 @@
               </div>
             </div>
 
-            <!-- פס התקדמות בסופר -->
             <div class="w-full bg-black/60 rounded-full h-2.5 mb-4 overflow-hidden border border-white/10">
               <div id="shopping-progress-bar" class="bg-gradient-to-r from-emerald-500 to-teal-300 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
             </div>
@@ -862,7 +899,6 @@
       navigator.serviceWorker.register('./sw.js').catch(() => {});
     }
 
-    // הגדרת Firebase עם המפתח המתוקן במדויק
     const firebaseConfig = {
       apiKey: "AIzaSyAhPVtjJ_kuHD6mHPLmvcmAQHJ4aCtxCSU",
       authDomain: "roommates-expenses-bar-ilan.firebaseapp.com",
@@ -887,9 +923,8 @@
     const STORAGE_KEY_INCLUDE_RENT = 'flat_include_rent';
     const MONTHLY_BUDGET_CAP = 4000;
 
-    // בדיקת מצב אורח (צפייה בלבד) דרך ה-URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const isGuestMode = urlParams.get('mode') === 'guest' || urlParams.get('view') === 'guest';
+    // בדיקת מצב אורח
+    const isGuestMode = IS_GUEST;
 
     const ROOMMATE_EMAILS = {
       'אסף': 'asaf1245@gmail.com',
@@ -1057,7 +1092,6 @@
       }
     }
 
-    // התחברות Google מאובטחת
     async function executeLogin() {
       triggerHaptic('light');
 
@@ -1089,7 +1123,6 @@
       }
     }
 
-    // התנתקות
     async function handleLogout() {
       if (confirm('האם להתנתק מהמערכת?')) {
         await auth.signOut();
@@ -1099,12 +1132,8 @@
       }
     }
 
-    // סנכרון Auth
     auth.onAuthStateChanged(user => {
-      if (isGuestMode) {
-        checkAuthStatus();
-        return;
-      }
+      if (isGuestMode) return;
 
       if (user) {
         const userEmail = (user.email || '').toLowerCase().trim();
@@ -1130,53 +1159,40 @@
       const nameBadge = document.getElementById('current-user-fullname');
       const guestBanner = document.getElementById('guest-banner');
 
-      // מצב צפייה בלבד (אורח)
       if (isGuestMode) {
-        authScreen.classList.add('hidden');
-        mainHeader.classList.remove('hidden');
-        mobileBottomBar.classList.remove('hidden');
-        mainContent.classList.remove('hidden');
-        guestBanner.classList.remove('hidden');
+        if (authScreen) authScreen.classList.add('hidden');
+        if (mainHeader) mainHeader.classList.remove('hidden');
+        if (mobileBottomBar) mobileBottomBar.classList.remove('hidden');
+        if (mainContent) mainContent.classList.remove('hidden');
+        if (guestBanner) guestBanner.classList.remove('hidden');
 
-        nameBadge.innerText = 'מצב צפייה (אורח)';
-        document.getElementById('btn-header-logout').classList.add('hidden');
-        document.getElementById('btn-theme-modal-trigger').classList.add('pointer-events-none');
-
-        // הסתרת כפתורי הוספה עבור אורח
-        const btnAddDesk = document.getElementById('btn-tab-add');
-        const btnAddMob = document.getElementById('m-tab-add');
-        if (btnAddDesk) btnAddDesk.classList.add('hidden');
-        if (btnAddMob) btnAddMob.classList.add('hidden');
-
-        // חסימת טפסי הוספה ברשימת קניות
-        const customShopForm = document.getElementById('custom-shopping-form');
-        const clearShopBtn = document.getElementById('btn-clear-shopping');
-        const loadBaseBtn = document.getElementById('btn-load-base-shopping');
-        if (customShopForm) customShopForm.classList.add('hidden');
-        if (clearShopBtn) clearShopBtn.classList.add('hidden');
-        if (loadBaseBtn) loadBaseBtn.classList.add('hidden');
+        if (nameBadge) nameBadge.innerText = 'מצב צפייה (אורח)';
+        
+        const logoutBtn = document.getElementById('btn-header-logout');
+        if (logoutBtn) logoutBtn.classList.add('hidden');
 
         switchView('dashboard');
         return;
       }
 
       if (!currentUser) {
-        authScreen.classList.remove('hidden');
-        mainHeader.classList.add('hidden');
-        mobileBottomBar.classList.add('hidden');
-        mainContent.classList.add('hidden');
-        guestBanner.classList.add('hidden');
+        if (authScreen) authScreen.classList.remove('hidden');
+        if (mainHeader) mainHeader.classList.add('hidden');
+        if (mobileBottomBar) mobileBottomBar.classList.add('hidden');
+        if (mainContent) mainContent.classList.add('hidden');
+        if (guestBanner) guestBanner.classList.add('hidden');
       } else {
-        authScreen.classList.add('hidden');
-        mainHeader.classList.remove('hidden');
-        mobileBottomBar.classList.remove('hidden');
-        mainContent.classList.remove('hidden');
-        guestBanner.classList.add('hidden');
+        if (authScreen) authScreen.classList.add('hidden');
+        if (mainHeader) mainHeader.classList.remove('hidden');
+        if (mobileBottomBar) mobileBottomBar.classList.remove('hidden');
+        if (mainContent) mainContent.classList.remove('hidden');
+        if (guestBanner) guestBanner.classList.add('hidden');
         
-        nameBadge.innerText = FULL_NAMES[currentUser] || currentUser;
+        if (nameBadge) nameBadge.innerText = FULL_NAMES[currentUser] || currentUser;
         applyGlobalTheme(currentUser);
 
-        document.getElementById('selected-roommate').value = currentUser;
+        const rmInput = document.getElementById('selected-roommate');
+        if (rmInput) rmInput.value = currentUser;
         renderRoommatesChips();
         switchView('add');
       }
@@ -1365,8 +1381,11 @@
       checkAuthStatus();
       initFirebaseRealtimeSync();
 
-      document.getElementById('date').value = new Date().toISOString().split('T')[0];
-      document.getElementById('toggle-rent').checked = includeRent;
+      const dateEl = document.getElementById('date');
+      if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
+      
+      const toggleRentEl = document.getElementById('toggle-rent');
+      if (toggleRentEl) toggleRentEl.checked = includeRent;
 
       renderCategoryGrid();
       renderRoommatesChips();
@@ -1386,15 +1405,21 @@
         renderCategorizedShopping();
       }
 
-      document.getElementById('date').addEventListener('change', (e) => {
-        const val = e.target.value;
-        if (val) registerNewMonth(val.substring(0, 7));
-      });
+      if (dateEl) {
+        dateEl.addEventListener('change', (e) => {
+          const val = e.target.value;
+          if (val) registerNewMonth(val.substring(0, 7));
+        });
+      }
 
       window.addEventListener('click', () => {
         const video = document.getElementById('live-bg-video');
         if (video && video.paused) video.play().catch(() => {});
       }, { once: true });
+
+      if (isGuestMode) {
+        switchView('dashboard');
+      }
 
       lucide.createIcons();
     });
@@ -1414,6 +1439,7 @@
 
       notificationsCollection.orderBy('timestamp', 'desc').limit(20).onSnapshot(snapshot => {
         const list = document.getElementById('notifications-list');
+        if (!list) return;
         if (snapshot.empty) {
           list.innerHTML = `
             <div class="py-6 text-center text-xs text-slate-300">
@@ -1563,11 +1589,11 @@
         const btnMobile = document.getElementById(`m-tab-${v}`);
 
         if (v === viewName) {
-          el.classList.remove('hidden');
+          if (el) el.classList.remove('hidden');
           if (btnDesktop) btnDesktop.className = "px-4 py-1.5 rounded-full text-xs font-bold transition-all pill-btn-white whitespace-nowrap cursor-pointer";
           if (btnMobile) btnMobile.className = "flex-1 py-2 rounded-full flex flex-col items-center justify-center gap-0.5 text-[11px] font-bold pill-btn-white transition-all";
         } else {
-          el.classList.add('hidden');
+          if (el) el.classList.add('hidden');
           if (btnDesktop) btnDesktop.className = "px-4 py-1.5 rounded-full text-xs font-medium text-slate-300 hover:text-white transition-all whitespace-nowrap cursor-pointer";
           if (btnMobile) btnMobile.className = "flex-1 py-2 rounded-full flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium text-slate-300 transition-all";
         }
@@ -1585,6 +1611,7 @@
 
     function renderCategoryGrid() {
       const container = document.getElementById('category-grid');
+      if (!container) return;
       const hiddenInput = document.getElementById('selected-category');
       const currentSelected = hiddenInput.value || CATEGORIES[0].id;
       hiddenInput.value = currentSelected;
@@ -1617,6 +1644,7 @@
 
     function renderRoommatesChips() {
       const container = document.getElementById('roommates-chips');
+      if (!container) return;
       const hiddenInput = document.getElementById('selected-roommate');
       const currentSelected = hiddenInput.value || currentUser || roommates[0];
       hiddenInput.value = currentSelected;
@@ -1651,6 +1679,7 @@
 
     function renderSplitParticipants() {
       const container = document.getElementById('split-participants-container');
+      if (!container) return;
       container.innerHTML = roommates.map(name => `
         <label class="flex items-center gap-1.5 px-4 py-2 rounded-full border border-white/20 text-xs font-semibold cursor-pointer capsule-pill hover:bg-white/20 transition-all text-slate-100">
           <input type="checkbox" name="split-roommate" value="${name}" checked class="rounded text-red-500 focus:ring-red-500 w-3.5 h-3.5 bg-black/60 border-slate-500" />
@@ -1829,21 +1858,21 @@
       const recurringBtn = document.getElementById('btn-recurring-bills');
 
       if (isGuestMode) {
-        lockBtn.classList.add('hidden');
+        if (lockBtn) lockBtn.classList.add('hidden');
         if (recurringBtn) recurringBtn.classList.add('hidden');
       } else if (selectedMonth === 'ALL') {
-        lockBadge.classList.add('hidden');
-        lockBtn.classList.add('hidden');
+        if (lockBadge) lockBadge.classList.add('hidden');
+        if (lockBtn) lockBtn.classList.add('hidden');
       } else {
-        lockBtn.classList.remove('hidden');
+        if (lockBtn) lockBtn.classList.remove('hidden');
         if (isSettled) {
-          lockBadge.classList.remove('hidden');
-          lockText.innerText = 'חודש נעול (לחץ לפתיחה)';
-          lockBtn.className = 'px-4 py-2 capsule-pill rounded-full text-xs font-bold flex items-center gap-1.5 transition-all text-emerald-300 border border-emerald-400/50 bg-emerald-950/40 cursor-pointer';
+          if (lockBadge) lockBadge.classList.remove('hidden');
+          if (lockText) lockText.innerText = 'חודש נעול (לחץ לפתיחה)';
+          if (lockBtn) lockBtn.className = 'px-4 py-2 capsule-pill rounded-full text-xs font-bold flex items-center gap-1.5 transition-all text-emerald-300 border border-emerald-400/50 bg-emerald-950/40 cursor-pointer';
         } else {
-          lockBadge.classList.add('hidden');
-          lockText.innerText = 'סמן חוב שולם ונעל חודש';
-          lockBtn.className = 'px-4 py-2 capsule-pill rounded-full text-xs font-bold flex items-center gap-1.5 transition-all text-slate-100 hover:text-white hover:bg-white/20 cursor-pointer';
+          if (lockBadge) lockBadge.classList.add('hidden');
+          if (lockText) lockText.innerText = 'סמן חוב שולם ונעל חודש';
+          if (lockBtn) lockBtn.className = 'px-4 py-2 capsule-pill rounded-full text-xs font-bold flex items-center gap-1.5 transition-all text-slate-100 hover:text-white hover:bg-white/20 cursor-pointer';
         }
       }
 
@@ -1858,6 +1887,7 @@
 
     function calculateSettlementsWithRent(filteredExpenses, isSettled = false) {
       const container = document.getElementById('settlements-container');
+      if (!container) return;
 
       if (isSettled) {
         container.innerHTML = `
@@ -1989,7 +2019,9 @@
       const catLabels = CATEGORIES.map(c => c.name);
       const catData = catLabels.map(l => catTotals[l] || 0);
 
-      const ctxCat = document.getElementById('categoryChart').getContext('2d');
+      const ctxCatEl = document.getElementById('categoryChart');
+      if (!ctxCatEl) return;
+      const ctxCat = ctxCatEl.getContext('2d');
       if (categoryChart) categoryChart.destroy();
       categoryChart = new Chart(ctxCat, {
         type: 'doughnut',
@@ -2022,7 +2054,9 @@
         return '#10b981';
       });
 
-      const ctxRoom = document.getElementById('roommateChart').getContext('2d');
+      const ctxRoomEl = document.getElementById('roommateChart');
+      if (!ctxRoomEl) return;
+      const ctxRoom = ctxRoomEl.getContext('2d');
       if (roommateChart) roommateChart.destroy();
       roommateChart = new Chart(ctxRoom, {
         type: 'bar',
@@ -2056,10 +2090,11 @@
     }
 
     function renderTable() {
-      const search = document.getElementById('search-input').value.toLowerCase();
-      const catFilter = document.getElementById('table-category-filter').value;
-      const roomFilter = document.getElementById('table-roommate-filter').value;
+      const search = document.getElementById('search-input')?.value?.toLowerCase() || '';
+      const catFilter = document.getElementById('table-category-filter')?.value || 'ALL';
+      const roomFilter = document.getElementById('table-roommate-filter')?.value || 'ALL';
       const tbody = document.getElementById('expenses-table-body');
+      if (!tbody) return;
 
       const filtered = getFilteredExpenses().filter(e => {
         const matchesSearch = e.description.toLowerCase().includes(search);
@@ -2232,6 +2267,7 @@
 
     function populateMonthFilter() {
       const select = document.getElementById('month-filter');
+      if (!select) return;
       const fromExpenses = expenses.map(e => e.date ? e.date.substring(0, 7) : null).filter(Boolean);
       const currentYM = getCurrentYearMonth();
       
@@ -2249,8 +2285,10 @@
     }
 
     function updateTableFilterOptions() {
-      document.getElementById('table-roommate-filter').innerHTML = '<option value="ALL">כל השותפים</option>' + roommates.map(r => `<option value="${r}">${FULL_NAMES[r] || r}</option>`).join('');
-      document.getElementById('table-category-filter').innerHTML = '<option value="ALL">כל הקטגוריות</option>' + CATEGORIES.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+      const rFilter = document.getElementById('table-roommate-filter');
+      const cFilter = document.getElementById('table-category-filter');
+      if (rFilter) rFilter.innerHTML = '<option value="ALL">כל השותפים</option>' + roommates.map(r => `<option value="${r}">${FULL_NAMES[r] || r}</option>`).join('');
+      if (cFilter) cFilter.innerHTML = '<option value="ALL">כל הקטגוריות</option>' + CATEGORIES.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
     }
 
     function shareWhatsAppSummary() {
@@ -2284,6 +2322,7 @@
 
     function showToast(msg) {
       const toast = document.getElementById('toast');
+      if (!toast) return;
       document.getElementById('toast-message').innerText = msg;
       toast.classList.remove('opacity-0', 'pointer-events-none');
       setTimeout(() => toast.classList.add('opacity-0', 'pointer-events-none'), 2200);
@@ -2301,6 +2340,8 @@
       const catContainer = document.getElementById('shopping-categories-container');
       const searchQuery = (document.getElementById('shopping-search-input')?.value || '').trim().toLowerCase();
 
+      if (!topContainer || !catContainer) return;
+
       const selectedForBuy = sortAlphabetically(shoppingItems.filter(i => i.done));
       
       if (selectedForBuy.length > 0) {
@@ -2308,53 +2349,55 @@
         const inCartCount = selectedForBuy.filter(i => i.inCart).length;
         const percent = Math.round((inCartCount / selectedForBuy.length) * 100);
         
-        topBadge.innerText = `${inCartCount}/${selectedForBuy.length} בעגלה (${percent}%) 🛒`;
-        progressBar.style.width = `${percent}%`;
+        if (topBadge) topBadge.innerText = `${inCartCount}/${selectedForBuy.length} בעגלה (${percent}%) 🛒`;
+        if (progressBar) progressBar.style.width = `${percent}%`;
 
-        topGrid.innerHTML = selectedForBuy.map(item => {
-          const isCart = item.inCart || false;
+        if (topGrid) {
+          topGrid.innerHTML = selectedForBuy.map(item => {
+            const isCart = item.inCart || false;
 
-          return `
-            <div 
-              onclick="${!isGuestMode ? `toggleItemInCart('${item.id}',${isCart})` : ''}"
-              class="px-3.5 py-2.5 rounded-xl glass-subcard flex items-center justify-between gap-2 text-xs ${!isGuestMode ? 'cursor-pointer' : ''} transition-all ${
-                isCart 
-                  ? 'border-emerald-400/80 bg-emerald-950/40 shadow-inner' 
-                  : 'hover:border-white/30'
-              }"
-              title="${!isGuestMode ? 'לחץ כדי לסמן שהפריט נכנס לעגלה בסופר 🛒' : ''}"
-            >
-              <div class="flex items-center gap-2.5 overflow-hidden">
-                <div class="w-4 h-4 rounded-md flex items-center justify-center shrink-0 border ${
-                  isCart ? 'bg-emerald-500 border-emerald-400 text-black' : 'border-white/30 bg-black/40'
-                }">
-                  ${isCart ? '<i data-lucide="shopping-bag" class="w-2.5 h-2.5 stroke-[3]"></i>' : ''}
+            return `
+              <div 
+                onclick="${!isGuestMode ? `toggleItemInCart('${item.id}',${isCart})` : ''}"
+                class="px-3.5 py-2.5 rounded-xl glass-subcard flex items-center justify-between gap-2 text-xs ${!isGuestMode ? 'cursor-pointer' : ''} transition-all ${
+                  isCart 
+                    ? 'border-emerald-400/80 bg-emerald-950/40 shadow-inner' 
+                    : 'hover:border-white/30'
+                }"
+                title="${!isGuestMode ? 'לחץ כדי לסמן שהפריט נכנס לעגלה בסופר 🛒' : ''}"
+              >
+                <div class="flex items-center gap-2.5 overflow-hidden">
+                  <div class="w-4 h-4 rounded-md flex items-center justify-center shrink-0 border ${
+                    isCart ? 'bg-emerald-500 border-emerald-400 text-black' : 'border-white/30 bg-black/40'
+                  }">
+                    ${isCart ? '<i data-lucide="shopping-bag" class="w-2.5 h-2.5 stroke-[3]"></i>' : ''}
+                  </div>
+                  <span class="font-bold truncate select-none ${
+                    isCart ? 'line-through text-emerald-300/80 opacity-75' : 'text-emerald-300'
+                  }">
+                    ${item.name}
+                  </span>
+                  ${isCart ? '<span class="text-[10px] text-emerald-400 font-normal shrink-0">(בעגלה)</span>' : ''}
                 </div>
-                <span class="font-bold truncate select-none ${
-                  isCart ? 'line-through text-emerald-300/80 opacity-75' : 'text-emerald-300'
-                }">
-                  ${item.name}
-                </span>
-                ${isCart ? '<span class="text-[10px] text-emerald-400 font-normal shrink-0">(בעגלה)</span>' : ''}
-              </div>
 
-              <div class="flex items-center gap-2 shrink-0" onclick="event.stopPropagation()">
-                <span class="text-[11px] font-mono px-2 py-0.5 rounded-md bg-emerald-950/80 border border-emerald-400/50 text-emerald-300 font-bold">
-                  x${item.qty || 1}
-                </span>
-                ${!isGuestMode ? `
-                  <button 
-                    onclick="removeFromShoppingTopList('${item.id}')" 
-                    class="text-slate-300 hover:text-rose-400 p-1 transition-colors cursor-pointer" 
-                    title="הסר מרשימת הקניות העליונה"
-                  >
-                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
-                  </button>
-                ` : ''}
+                <div class="flex items-center gap-2 shrink-0" onclick="event.stopPropagation()">
+                  <span class="text-[11px] font-mono px-2 py-0.5 rounded-md bg-emerald-950/80 border border-emerald-400/50 text-emerald-300 font-bold">
+                    x${item.qty || 1}
+                  </span>
+                  ${!isGuestMode ? `
+                    <button 
+                      onclick="removeFromShoppingTopList('${item.id}')" 
+                      class="text-slate-300 hover:text-rose-400 p-1 transition-colors cursor-pointer" 
+                      title="הסר מרשימת הקניות העליונה"
+                    >
+                      <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    </button>
+                  ` : ''}
+                </div>
               </div>
-            </div>
-          `;
-        }).join('');
+            `;
+          }).join('');
+        }
       } else {
         topContainer.classList.add('hidden');
       }
