@@ -2251,7 +2251,6 @@
       }
     }
 
-    // ייצוא אקסל מתוקן ללא בעיות Escape Sequence
     function exportToCSV() {
       const filtered = getFilteredExpenses();
       if (filtered.length === 0) return alert('אין הוצאות לייצוא');
@@ -2262,7 +2261,7 @@
         csvRows.push(`"${e.date}","${e.category}","${e.description}","${FULL_NAMES[e.roommate] || e.roommate}","${splitText}",${e.amount}`);
       });
 
-      const csvString = '\uFEFF' + csvRows.join('\n');
+      const csvString = csvRows.join('\n');
       const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement("a");
       const url = URL.createObjectURL(blob);
