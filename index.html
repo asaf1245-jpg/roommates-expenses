@@ -230,7 +230,7 @@
 
     @media print {
       body { background: #fff !important; color: #000 !important; padding: 0 !important; }
-      .video-backdrop, header, #mobile-bottom-bar, button, #toast, form { display: none !important; }
+      .video-backdrop, header, #mobile-bottom-bar, button, #toast, form, #guest-banner { display: none !important; }
       #view-dashboard { display: block !important; }
       .liquid-glass, .capsule-pill { background: none !important; border: 1px solid #ccc !important; color: #000 !important; box-shadow: none !important; }
       h2, h3, h4, span, td, th { color: #000 !important; }
@@ -245,6 +245,11 @@
     <div class="color-layer-primary"></div>
     <div class="color-layer-secondary"></div>
     <div class="video-vignette"></div>
+  </div>
+
+  <!-- באנר מצב אורח (צפייה בלבד) -->
+  <div id="guest-banner" class="fixed top-0 inset-x-0 z-50 bg-amber-500/20 backdrop-blur-md border-b border-amber-500/30 px-4 py-2 text-center text-xs font-semibold text-amber-200 hidden">
+    <span>מצב צפייה בלבד (אורח) — אין אפשרות לשנות או להוסיף נתונים.</span>
   </div>
 
   <!-- 1. מסך התחברות Google מאובטח -->
@@ -290,12 +295,12 @@
   <header id="main-header" class="w-full py-4 px-3 sm:px-8 flex justify-center sticky top-0 z-40 hidden">
     <div class="capsule-pill px-4 sm:px-6 py-2 rounded-full grid grid-cols-2 sm:grid-cols-3 items-center max-w-4xl w-full">
       <div class="flex items-center gap-2.5">
-        <button onclick="openThemeSettingsModal()" class="flex items-center gap-2 border-l border-white/15 pl-3 hover:opacity-80 transition-opacity cursor-pointer group" title="הגדרות צבע והתאמה אישית">
+        <button id="btn-theme-modal-trigger" onclick="openThemeSettingsModal()" class="flex items-center gap-2 border-l border-white/15 pl-3 hover:opacity-80 transition-opacity cursor-pointer group" title="הגדרות צבע והתאמה אישית">
           <i data-lucide="palette" class="w-3.5 h-3.5 text-slate-300 group-hover:scale-110 transition-transform"></i>
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
           <span id="current-user-fullname" class="font-serif italic text-xs text-white">שותף מחובר</span>
         </button>
-        <button onclick="handleLogout()" class="text-slate-300 hover:text-rose-400 transition-colors p-1" title="התנתק מהחשבון">
+        <button id="btn-header-logout" onclick="handleLogout()" class="text-slate-300 hover:text-rose-400 transition-colors p-1" title="התנתק מהחשבון">
           <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
         </button>
       </div>
@@ -531,7 +536,7 @@
             <span id="lock-btn-text">סמן חוב שולם ונעל חודש</span>
           </button>
 
-          <button onclick="loadRecurringBills()" class="px-4 py-2 capsule-pill rounded-full text-xs font-bold flex items-center gap-1.5 hover:bg-white/20 transition-all cursor-pointer" title="טען חשבונות קבועים (ארנונה, אינטרנט, ועד)">
+          <button id="btn-recurring-bills" onclick="loadRecurringBills()" class="px-4 py-2 capsule-pill rounded-full text-xs font-bold flex items-center gap-1.5 hover:bg-white/20 transition-all cursor-pointer" title="טען חשבונות קבועים (ארנונה, אינטרנט, ועד)">
             <i data-lucide="repeat" class="w-3.5 h-3.5 text-blue-400"></i>
             חשבונות קבועים
           </button>
@@ -709,11 +714,11 @@
           </div>
           
           <div class="flex items-center gap-2">
-            <button onclick="clearCompletedShoppingItems()" class="px-4 py-2 capsule-pill rounded-full text-xs font-semibold text-rose-300 hover:text-rose-200 hover:bg-rose-950/40 border border-rose-400/40 transition-all flex items-center gap-1.5 cursor-pointer">
+            <button id="btn-clear-shopping" onclick="clearCompletedShoppingItems()" class="px-4 py-2 capsule-pill rounded-full text-xs font-semibold text-rose-300 hover:text-rose-200 hover:bg-rose-950/40 border border-rose-400/40 transition-all flex items-center gap-1.5 cursor-pointer">
               <i data-lucide="check-check" class="w-3.5 h-3.5"></i>
               <span>אפס סימונים שנקנו</span>
             </button>
-            <button onclick="loadDefaultShoppingList()" class="px-4 py-2 pill-btn-white rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer">
+            <button id="btn-load-base-shopping" onclick="loadDefaultShoppingList()" class="px-4 py-2 pill-btn-white rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer">
               <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
               <span>טען רשימת בסיס</span>
             </button>
@@ -745,7 +750,7 @@
         </div>
 
         <!-- הוספת מוצר חדש -->
-        <form onsubmit="handleCustomShoppingItem(event)" class="grid grid-cols-1 sm:grid-cols-12 gap-2.5 mb-6">
+        <form id="custom-shopping-form" onsubmit="handleCustomShoppingItem(event)" class="grid grid-cols-1 sm:grid-cols-12 gap-2.5 mb-6">
           <input
             type="text"
             id="custom-shopping-name"
@@ -857,6 +862,7 @@
       navigator.serviceWorker.register('./sw.js').catch(() => {});
     }
 
+    // הגדרת Firebase עם המפתח המתוקן במדויק
     const firebaseConfig = {
       apiKey: "AIzaSyAhPVtjJ_kuHD6mHPLmvcmAQHJ4aCtxCSU",
       authDomain: "roommates-expenses-bar-ilan.firebaseapp.com",
@@ -881,6 +887,10 @@
     const STORAGE_KEY_INCLUDE_RENT = 'flat_include_rent';
     const MONTHLY_BUDGET_CAP = 4000;
 
+    // בדיקת מצב אורח (צפייה בלבד) דרך ה-URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const isGuestMode = urlParams.get('mode') === 'guest' || urlParams.get('view') === 'guest';
+
     const ROOMMATE_EMAILS = {
       'אסף': 'asaf1245@gmail.com',
       'קנאו': 'kanaoh1@gmail.com',
@@ -891,12 +901,6 @@
       'אסף': 'Asaf Kehimker',
       'אלעד': 'Elad Kehimker',
       'קנאו': 'Kanaoh Ijigu'
-    };
-
-    const ROOMMATE_PHONES = {
-      'אסף': '',
-      'אלעד': '',
-      'קנאו': ''
     };
 
     const THEME_PRESETS = [
@@ -1053,6 +1057,7 @@
       }
     }
 
+    // התחברות Google מאובטחת
     async function executeLogin() {
       triggerHaptic('light');
 
@@ -1084,6 +1089,7 @@
       }
     }
 
+    // התנתקות
     async function handleLogout() {
       if (confirm('האם להתנתק מהמערכת?')) {
         await auth.signOut();
@@ -1093,7 +1099,13 @@
       }
     }
 
+    // סנכרון Auth
     auth.onAuthStateChanged(user => {
+      if (isGuestMode) {
+        checkAuthStatus();
+        return;
+      }
+
       if (user) {
         const userEmail = (user.email || '').toLowerCase().trim();
         for (const [name, email] of Object.entries(ROOMMATE_EMAILS)) {
@@ -1116,17 +1128,50 @@
       const mobileBottomBar = document.getElementById('mobile-bottom-bar');
       const mainContent = document.getElementById('main-content');
       const nameBadge = document.getElementById('current-user-fullname');
+      const guestBanner = document.getElementById('guest-banner');
+
+      // מצב צפייה בלבד (אורח)
+      if (isGuestMode) {
+        authScreen.classList.add('hidden');
+        mainHeader.classList.remove('hidden');
+        mobileBottomBar.classList.remove('hidden');
+        mainContent.classList.remove('hidden');
+        guestBanner.classList.remove('hidden');
+
+        nameBadge.innerText = 'מצב צפייה (אורח)';
+        document.getElementById('btn-header-logout').classList.add('hidden');
+        document.getElementById('btn-theme-modal-trigger').classList.add('pointer-events-none');
+
+        // הסתרת כפתורי הוספה עבור אורח
+        const btnAddDesk = document.getElementById('btn-tab-add');
+        const btnAddMob = document.getElementById('m-tab-add');
+        if (btnAddDesk) btnAddDesk.classList.add('hidden');
+        if (btnAddMob) btnAddMob.classList.add('hidden');
+
+        // חסימת טפסי הוספה ברשימת קניות
+        const customShopForm = document.getElementById('custom-shopping-form');
+        const clearShopBtn = document.getElementById('btn-clear-shopping');
+        const loadBaseBtn = document.getElementById('btn-load-base-shopping');
+        if (customShopForm) customShopForm.classList.add('hidden');
+        if (clearShopBtn) clearShopBtn.classList.add('hidden');
+        if (loadBaseBtn) loadBaseBtn.classList.add('hidden');
+
+        switchView('dashboard');
+        return;
+      }
 
       if (!currentUser) {
         authScreen.classList.remove('hidden');
         mainHeader.classList.add('hidden');
         mobileBottomBar.classList.add('hidden');
         mainContent.classList.add('hidden');
+        guestBanner.classList.add('hidden');
       } else {
         authScreen.classList.add('hidden');
         mainHeader.classList.remove('hidden');
         mobileBottomBar.classList.remove('hidden');
         mainContent.classList.remove('hidden');
+        guestBanner.classList.add('hidden');
         
         nameBadge.innerText = FULL_NAMES[currentUser] || currentUser;
         applyGlobalTheme(currentUser);
@@ -1199,6 +1244,8 @@
     }
 
     async function loadRecurringBills() {
+      if (isGuestMode) return;
+
       if (isMonthSettled(selectedMonth)) {
         alert('חודש זה נעול לתשלומים.');
         return;
@@ -1398,14 +1445,16 @@
                   ${n.fullDate || n.time || ''}
                 </span>
 
-                <div class="flex items-center gap-1.5 border-r border-white/20 pr-2">
-                  <button onclick="toggleNotificationRead('${docId}', ${isRead})" class="p-1 text-slate-300 hover:text-emerald-400 transition-colors cursor-pointer" title="${isRead ? 'סמן כלא נקרא' : 'סמן כנקרא'}">
-                    <i data-lucide="${isRead ? 'rotate-ccw' : 'check'}" class="w-3.5 h-3.5"></i>
-                  </button>
-                  <button onclick="deleteNotification('${docId}')" class="p-1 text-slate-300 hover:text-rose-400 transition-colors cursor-pointer" title="מחק התראה">
-                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                  </button>
-                </div>
+                ${!isGuestMode ? `
+                  <div class="flex items-center gap-1.5 border-r border-white/20 pr-2">
+                    <button onclick="toggleNotificationRead('${docId}', ${isRead})" class="p-1 text-slate-300 hover:text-emerald-400 transition-colors cursor-pointer" title="${isRead ? 'סמן כלא נקרא' : 'סמן כנקרא'}">
+                      <i data-lucide="${isRead ? 'rotate-ccw' : 'check'}" class="w-3.5 h-3.5"></i>
+                    </button>
+                    <button onclick="deleteNotification('${docId}')" class="p-1 text-slate-300 hover:text-rose-400 transition-colors cursor-pointer" title="מחק התראה">
+                      <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                  </div>
+                ` : ''}
               </div>
             </div>
           `;
@@ -1443,6 +1492,7 @@
     }
 
     function openThemeSettingsModal() {
+      if (isGuestMode) return;
       const activeUser = currentUser || 'אסף';
       const currentThemeId = userThemes[activeUser] || (activeUser === 'אלעד' ? 'elad' : activeUser === 'קנאו' ? 'kanao' : 'asaf');
       const container = document.getElementById('theme-options-container');
@@ -1480,6 +1530,7 @@
     }
 
     async function setUserTheme(user, themeId) {
+      if (isGuestMode) return;
       userThemes[user] = themeId;
       applyGlobalTheme(user);
       openThemeSettingsModal();
@@ -1502,6 +1553,8 @@
     }
 
     function switchView(viewName) {
+      if (isGuestMode && viewName === 'add') return;
+
       triggerHaptic('light');
       const views = ['add', 'dashboard', 'shopping'];
       views.forEach(v => {
@@ -1620,6 +1673,7 @@
 
     async function handleFormSubmit(e) {
       e.preventDefault();
+      if (isGuestMode) return;
       triggerHaptic('success');
       const date = document.getElementById('date').value;
       const expenseMonth = date ? date.substring(0, 7) : null;
@@ -1707,6 +1761,8 @@
     }
 
     async function toggleCurrentMonthSettled() {
+      if (isGuestMode) return;
+
       if (selectedMonth === 'ALL') {
         alert('יש לבחור חודש ספציפי כדי לנעול או לסמן חוב שולם.');
         return;
@@ -1770,8 +1826,12 @@
       const lockBadge = document.getElementById('month-lock-badge');
       const lockBtn = document.getElementById('btn-toggle-month-settled');
       const lockText = document.getElementById('lock-btn-text');
+      const recurringBtn = document.getElementById('btn-recurring-bills');
 
-      if (selectedMonth === 'ALL') {
+      if (isGuestMode) {
+        lockBtn.classList.add('hidden');
+        if (recurringBtn) recurringBtn.classList.add('hidden');
+      } else if (selectedMonth === 'ALL') {
         lockBadge.classList.add('hidden');
         lockBtn.classList.add('hidden');
       } else {
@@ -1811,9 +1871,11 @@
                 <span class="text-[11px] text-slate-300 font-normal">החודש נעול להוצאות חדשות או שינויים כדי לשמור על היסטוריית החשבון.</span>
               </div>
             </div>
-            <button onclick="toggleCurrentMonthSettled()" class="px-4 py-2 rounded-full pill-btn-glass text-[11px] font-semibold text-emerald-200 hover:text-white shrink-0 cursor-pointer">
-              בטל נעילת חודש
-            </button>
+            ${!isGuestMode ? `
+              <button onclick="toggleCurrentMonthSettled()" class="px-4 py-2 rounded-full pill-btn-glass text-[11px] font-semibold text-emerald-200 hover:text-white shrink-0 cursor-pointer">
+                בטל נעילת חודש
+              </button>
+            ` : ''}
           </div>
         `;
         window.currentSettlements = [];
@@ -2015,7 +2077,7 @@
         const dotCol = item.roommate === 'אסף' ? '#ff2a44' : item.roommate === 'אלעד' ? '#2563eb' : '#facc15';
         const itemMonth = item.date ? item.date.substring(0, 7) : null;
         const itemLocked = isMonthSettled(itemMonth);
-        const canModify = (item.roommate === currentUser);
+        const canModify = !isGuestMode && (item.roommate === currentUser);
 
         return `
           <tr class="hover:bg-white/10 transition-colors">
@@ -2060,7 +2122,7 @@
                   </button>
                 </div>
               ` : `
-                <span class="text-slate-500 text-[11px]" title="עריכה אפשרית רק למי שהזין את ההוצאה">-</span>
+                <span class="text-slate-500 text-[11px]" title="${isGuestMode ? 'מצב צפייה בלבד' : 'עריכה אפשרית רק למי שהזין את ההוצאה'}">-</span>
               `}
             </td>
           </tr>
@@ -2070,6 +2132,7 @@
     }
 
     function openEditModal(id) {
+      if (isGuestMode) return;
       const exp = expenses.find(e => e.id === id);
       if (!exp) return;
 
@@ -2102,6 +2165,7 @@
 
     async function saveEditedExpense(e) {
       e.preventDefault();
+      if (isGuestMode) return;
       const id = document.getElementById('edit-id').value;
       const newDate = document.getElementById('edit-date').value;
       const newMonth = newDate ? newDate.substring(0, 7) : null;
@@ -2127,6 +2191,7 @@
     }
 
     async function deleteExpense(id) {
+      if (isGuestMode) return;
       const exp = expenses.find(e => e.id === id);
       const expMonth = exp && exp.date ? exp.date.substring(0, 7) : null;
 
@@ -2251,13 +2316,13 @@
 
           return `
             <div 
-              onclick="toggleItemInCart('${item.id}', ${isCart})"
-              class="px-3.5 py-2.5 rounded-xl glass-subcard flex items-center justify-between gap-2 text-xs cursor-pointer transition-all ${
+              onclick="${!isGuestMode ? `toggleItemInCart('${item.id}',${isCart})` : ''}"
+              class="px-3.5 py-2.5 rounded-xl glass-subcard flex items-center justify-between gap-2 text-xs ${!isGuestMode ? 'cursor-pointer' : ''} transition-all ${
                 isCart 
                   ? 'border-emerald-400/80 bg-emerald-950/40 shadow-inner' 
                   : 'hover:border-white/30'
               }"
-              title="לחץ כדי לסמן שהפריט נכנס לעגלה בסופר 🛒"
+              title="${!isGuestMode ? 'לחץ כדי לסמן שהפריט נכנס לעגלה בסופר 🛒' : ''}"
             >
               <div class="flex items-center gap-2.5 overflow-hidden">
                 <div class="w-4 h-4 rounded-md flex items-center justify-center shrink-0 border ${
@@ -2277,13 +2342,15 @@
                 <span class="text-[11px] font-mono px-2 py-0.5 rounded-md bg-emerald-950/80 border border-emerald-400/50 text-emerald-300 font-bold">
                   x${item.qty || 1}
                 </span>
-                <button 
-                  onclick="removeFromShoppingTopList('${item.id}')" 
-                  class="text-slate-300 hover:text-rose-400 p-1 transition-colors cursor-pointer" 
-                  title="הסר מרשימת הקניות העליונה"
-                >
-                  <i data-lucide="x" class="w-3.5 h-3.5"></i>
-                </button>
+                ${!isGuestMode ? `
+                  <button 
+                    onclick="removeFromShoppingTopList('${item.id}')" 
+                    class="text-slate-300 hover:text-rose-400 p-1 transition-colors cursor-pointer" 
+                    title="הסר מרשימת הקניות העליונה"
+                  >
+                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                  </button>
+                ` : ''}
               </div>
             </div>
           `;
@@ -2321,8 +2388,9 @@
                     <input
                       type="checkbox"
                       ${item.done ? 'checked' : ''}
+                      ${isGuestMode ? 'disabled' : ''}
                       onchange="toggleShoppingItemDone('${item.id}',${item.done})"
-                      class="rounded text-emerald-500 focus:ring-emerald-500 w-4 h-4 bg-black/60 border-slate-500 cursor-pointer"
+                      class="rounded text-emerald-500 focus:ring-emerald-500 w-4 h-4 bg-black/60 border-slate-500 ${!isGuestMode ? 'cursor-pointer' : ''}"
                     />
                     <span class="font-medium truncate ${item.done ? 'text-emerald-300 font-bold' : 'text-slate-100'}">
                       ${item.name}
@@ -2331,14 +2399,19 @@
 
                   <div class="flex items-center gap-1.5 shrink-0">
                     <div class="flex items-center gap-1 bg-white/10 border border-white/20 rounded-lg px-1.5 py-0.5">
-                      <button type="button" onclick="updateItemQty('${item.id}',${(item.qty || 1) - 1})" class="text-slate-200 hover:text-white px-1 font-bold cursor-pointer">-</button>
-                      <span class="text-[11px] font-mono font-bold text-white min-w-[14px] text-center">${item.qty || 1}</span>
-                      <button type="button" onclick="updateItemQty('${item.id}',${(item.qty || 1) + 1})" class="text-slate-200 hover:text-white px-1 font-bold cursor-pointer">+</button>
+                      ${!isGuestMode ? `
+                        <button type="button" onclick="updateItemQty('${item.id}', ${(item.qty || 1) - 1})" class="text-slate-200 hover:text-white px-1 font-bold cursor-pointer">-</button>
+                      ` : ''}
+                      <span class="text-[11px] font-mono font-bold text-white min-w-[14px] text-center">${item.qty \vert{}\vert{} 1}</span>${!isGuestMode ? `
+                        <button type="button" onclick="updateItemQty('${item.id}', ${(item.qty || 1) + 1})" class="text-slate-200 hover:text-white px-1 font-bold cursor-pointer">+</button>
+                      ` : ''}
                     </div>
 
-                    <button onclick="deleteShoppingItem('${item.id}')" class="text-slate-400 hover:text-rose-400 p-1 transition-colors cursor-pointer" title="מחק מוצר לחלוטין">
-                      <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                    </button>
+                    ${!isGuestMode ? `
+                      <button onclick="deleteShoppingItem('${item.id}')" class="text-slate-400 hover:text-rose-400 p-1 transition-colors cursor-pointer" title="מחק מוצר לחלוטין">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                      </button>
+                    ` : ''}
                   </div>
                 </div>
               `).join('')}
@@ -2350,6 +2423,7 @@
     }
 
     async function toggleItemInCart(id, currentInCart) {
+      if (isGuestMode) return;
       triggerHaptic('light');
       try {
         if (!id.startsWith('def_') && !id.startsWith('custom_')) {
@@ -2367,6 +2441,7 @@
     }
 
     async function removeFromShoppingTopList(id) {
+      if (isGuestMode) return;
       triggerHaptic('light');
       try {
         if (!id.startsWith('def_') && !id.startsWith('custom_')) {
@@ -2386,6 +2461,7 @@
 
     async function handleCustomShoppingItem(e) {
       e.preventDefault();
+      if (isGuestMode) return;
       triggerHaptic('light');
       const input = document.getElementById('custom-shopping-name');
       const cat = document.getElementById('custom-shopping-cat').value;
@@ -2429,6 +2505,7 @@
     }
 
     async function updateItemQty(id, newQty) {
+      if (isGuestMode) return;
       triggerHaptic('light');
       if (newQty < 1) {
         if (confirm('האם למחוק פריט זה לחלוטין מהקטלוג?')) {
@@ -2448,6 +2525,7 @@
     }
 
     async function toggleShoppingItemDone(id, currentStatus) {
+      if (isGuestMode) return;
       triggerHaptic('light');
       try {
         await shoppingCollection.doc(id).update({ done: !currentStatus, inCart: false });
@@ -2462,6 +2540,7 @@
     }
 
     async function deleteShoppingItem(id) {
+      if (isGuestMode) return;
       if (!confirm('האם למחוק פריט זה לחלוטין מהרשימה?')) return;
       try {
         await shoppingCollection.doc(id).delete();
@@ -2472,6 +2551,7 @@
     }
 
     async function clearCompletedShoppingItems() {
+      if (isGuestMode) return;
       const completed = shoppingItems.filter(i => i.done);
       if (completed.length === 0) return alert('אין פריטים שסומנו לקנייה.');
       if (!confirm(`האם לאפס את הסימון של ${completed.length} פריטים שנקנו? (הפריטים יישארו ברשימה המלאה)`)) return;
@@ -2497,6 +2577,7 @@
     }
 
     async function loadDefaultShoppingList(silent = false) {
+      if (isGuestMode) return;
       if (!silent && !confirm('האם לטעון מחדש את רשימת הקניות המקורית של הדירה (מנקה כפילויות קיימות)?')) return;
       try {
         const batch = db.batch();
@@ -2532,6 +2613,7 @@
 
     async function postNotification(e) {
       e.preventDefault();
+      if (isGuestMode) return;
       triggerHaptic('light');
       const input = document.getElementById('notification-input');
       const text = input.value.trim();
@@ -2556,6 +2638,7 @@
     }
 
     async function toggleNotificationRead(id, currentStatus) {
+      if (isGuestMode) return;
       try {
         await notificationsCollection.doc(id).update({ isRead: !currentStatus });
       } catch (err) {
@@ -2564,6 +2647,7 @@
     }
 
     async function deleteNotification(id) {
+      if (isGuestMode) return;
       if (confirm('האם למחוק התראה זו?')) {
         try {
           await notificationsCollection.doc(id).delete();
