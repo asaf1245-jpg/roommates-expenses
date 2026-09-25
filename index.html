@@ -858,7 +858,7 @@
     }
 
     const firebaseConfig = {
-      apiKey: "AIzaSyAhPVtjj_kuHD6mHPLmvcmAQHJ4aCtxCSU",
+      apiKey: "AIzaSyAhPVtjJ_kuHD6mHPLmvcmAQHJ4aCtxCSU",
       authDomain: "roommates-expenses-bar-ilan.firebaseapp.com",
       projectId: "roommates-expenses-bar-ilan",
       storageBucket: "roommates-expenses-bar-ilan.firebasestorage.app",
@@ -881,7 +881,6 @@
     const STORAGE_KEY_INCLUDE_RENT = 'flat_include_rent';
     const MONTHLY_BUDGET_CAP = 4000;
 
-    // הגדרת המשתמשים המורשים לפי הכתובות שהזנת
     const ROOMMATE_EMAILS = {
       'אסף': 'asaf1245@gmail.com',
       'קנאו': 'kanaoh1@gmail.com',
@@ -1054,7 +1053,6 @@
       }
     }
 
-    // התחברות Google מאובטחת
     async function executeLogin() {
       triggerHaptic('light');
 
@@ -1086,7 +1084,6 @@
       }
     }
 
-    // התנתקות
     async function handleLogout() {
       if (confirm('האם להתנתק מהמערכת?')) {
         await auth.signOut();
@@ -1096,7 +1093,6 @@
       }
     }
 
-    // האזנה רציפה לאימות משתמש
     auth.onAuthStateChanged(user => {
       if (user) {
         const userEmail = (user.email || '').toLowerCase().trim();
