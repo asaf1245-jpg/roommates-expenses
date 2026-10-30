@@ -85,7 +85,8 @@
     html.is-guest-mode #btn-recurring-bills,
     html.is-guest-mode #custom-shopping-form,
     html.is-guest-mode #btn-clear-shopping,
-    html.is-guest-mode #btn-load-base-shopping {
+    html.is-guest-mode #btn-load-base-shopping,
+    html.is-guest-mode #tasks-add-btn {
       display: none !important;
     }
 
@@ -356,6 +357,7 @@
         <button id="btn-tab-shopping" onclick="switchView('shopping')" class="px-4 py-1.5 rounded-full text-xs font-medium text-slate-200 hover:text-white transition-all whitespace-nowrap">
           רשימת קניות
         </button>
+        <button id="btn-tab-tasks" onclick="switchView('tasks')" class="px-4 py-1.5 rounded-full text-xs font-medium text-slate-200 hover:text-white transition-all whitespace-nowrap">משימות</button>
       </nav>
 
       <div class="hidden sm:block"></div>
@@ -375,6 +377,9 @@
     <button id="m-tab-shopping" onclick="switchView('shopping')" class="flex-1 py-2 rounded-full flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium text-slate-300 transition-all">
       <i data-lucide="shopping-cart" class="w-4 h-4"></i>
       <span>קניות</span>
+    </button>
+    <button id="m-tab-tasks" onclick="switchView('tasks')" class="flex-1 py-2 rounded-full flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium text-slate-300 transition-all">
+      <i data-lucide="list-checks" class="w-4 h-4"></i><span>משימות</span>
     </button>
   </nav>
 
@@ -854,7 +859,48 @@
       </div>
     </section>
 
+
+    <!-- מסך משימות שותפים -->
+    <section id="view-tasks" class="w-full max-w-6xl mx-auto space-y-5 hidden tab-view-anim">
+      <div class="flex flex-wrap justify-between items-center gap-4">
+        <div><h2 class="text-3xl font-extrabold">משימות הבית</h2><p class="text-slate-300 text-sm">כל המשימות של השותפים במקום אחד</p></div>
+        <button id="tasks-add-btn" onclick="openTaskForm()" class="pill-btn-white rounded-full px-6 py-3 text-sm font-bold">+ הוסף משימה</button>
+      </div>
+      <div class="liquid-glass rounded-3xl p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <input id="tasks-search" oninput="renderTasks()" aria-label="חיפוש משימות" placeholder="חיפוש משימות..." class="glass-input rounded-2xl p-3 text-white w-full" />
+        <select id="tasks-status-filter" onchange="renderTasks()" aria-label="סינון סטטוס" class="glass-input rounded-2xl p-3 text-white"><option value="">כל הסטטוסים</option><option value="open">פתוחה</option><option value="progress">בביצוע</option><option value="done">הושלמה</option><option value="overdue">באיחור</option></select>
+        <select id="tasks-assignee-filter" onchange="renderTasks()" aria-label="סינון לפי שותף" class="glass-input rounded-2xl p-3 text-white"><option value="">כל השותפים</option><option>אסף</option><option>אלעד</option><option>קנאו</option></select>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div class="glass-subcard rounded-2xl p-4"><p class="text-xs text-slate-300">סה״כ משימות</p><strong class="text-3xl" id="task-count-all">0</strong></div>
+        <div class="glass-subcard rounded-2xl p-4"><p class="text-xs text-amber-300">פתוחות</p><strong class="text-3xl" id="task-count-open">0</strong></div>
+        <div class="glass-subcard rounded-2xl p-4"><p class="text-xs text-emerald-300">הושלמו</p><strong class="text-3xl" id="task-count-done">0</strong></div>
+        <div class="glass-subcard rounded-2xl p-4"><p class="text-xs text-rose-300">באיחור</p><strong class="text-3xl" id="task-count-overdue">0</strong></div>
+      </div>
+      <div class="liquid-glass rounded-3xl p-4 sm:p-6">
+        <h3 class="font-bold text-xl mb-4">רשימת משימות</h3>
+        <div id="tasks-list" class="space-y-3"><p class="text-slate-300">אין משימות כרגע</p></div>
+      </div>
+    </section>
+
   </main>
+
+
+  <div id="task-form-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-md p-4" role="dialog" aria-modal="true" aria-labelledby="task-modal-title">
+    <div class="liquid-glass rounded-3xl w-full max-w-md p-6">
+      <div class="flex items-center justify-between mb-5"><h3 class="text-xl font-bold" id="task-modal-title">הוספת משימה</h3><button type="button" onclick="closeTaskForm()" aria-label="סגור">✕</button></div>
+      <form id="task-form" onsubmit="saveTask(event)" class="space-y-3">
+        <input type="hidden" id="task-edit-id">
+        <input id="task-title" required maxlength="120" placeholder="שם המשימה" class="glass-input rounded-xl p-3 w-full text-white">
+        <textarea id="task-description" rows="2" maxlength="500" placeholder="תיאור (לא חובה)" class="glass-input rounded-xl p-3 w-full text-white"></textarea>
+        <label class="block text-sm">אחראי<select id="task-assignee" class="glass-input rounded-xl p-3 w-full text-white mt-1"><option>אסף</option><option>אלעד</option><option>קנאו</option></select></label>
+        <label class="block text-sm">תאריך יעד<input type="date" id="task-due" class="glass-input rounded-xl p-3 w-full text-white mt-1"></label>
+        <label class="block text-sm">עדיפות<select id="task-priority" class="glass-input rounded-xl p-3 w-full text-white mt-1"><option value="medium">בינונית</option><option value="low">נמוכה</option><option value="high">גבוהה</option></select></label>
+        <label class="block text-sm">סטטוס<select id="task-status" class="glass-input rounded-xl p-3 w-full text-white mt-1"><option value="open">פתוחה</option><option value="progress">בביצוע</option><option value="done">הושלמה</option></select></label>
+        <button id="task-save-btn" type="submit" class="pill-btn-white rounded-full p-3 w-full font-bold">שמור משימה</button>
+      </form>
+    </div>
+  </div>
 
   <!-- Modal עריכה -->
   <div id="edit-expense-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
@@ -919,6 +965,8 @@
     const expensesCollection = db.collection('expenses');
     const notificationsCollection = db.collection('notifications');
     const shoppingCollection = db.collection('shoppingList_bar_ilan');
+    const tasksCollection = db.collection('tasks_bar_ilan');
+    let tasks = [];
     const settingsDoc = db.collection('settings').doc('appData');
 
     const STORAGE_KEY_AUTH_USER = 'flat_auth_user_v12';
@@ -1525,6 +1573,11 @@
         lucide.createIcons();
       }, err => console.warn('Firebase notifications sync:', err));
 
+      tasksCollection.onSnapshot(snapshot => {
+        tasks = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        renderTasks();
+      }, err => console.warn('Firebase tasks sync:', err));
+
       shoppingCollection.onSnapshot(snapshot => {
         if (!snapshot.empty) {
           shoppingItems = [];
@@ -1619,7 +1672,7 @@
       if (isGuestMode && viewName === 'add') return;
 
       triggerHaptic('light');
-      const views = ['add', 'dashboard', 'shopping'];
+      const views = ['add', 'dashboard', 'shopping', 'tasks'];
       views.forEach(v => {
         const el = document.getElementById(`view-${v}`);
         const btnDesktop = document.getElementById(`btn-tab-${v}`);
@@ -1642,6 +1695,8 @@
         refreshDashboard();
       } else if (viewName === 'shopping') {
         renderCategorizedShopping();
+      } else if (viewName === 'tasks') {
+        renderTasks();
       }
       lucide.createIcons();
     }
@@ -2365,6 +2420,93 @@
       document.getElementById('toast-message').innerText = msg;
       toast.classList.remove('opacity-0', 'pointer-events-none');
       setTimeout(() => toast.classList.add('opacity-0', 'pointer-events-none'), 2200);
+    }
+
+
+    function taskOverdue(t) {
+      return t.status !== 'done' && !!t.due && t.due < new Date().toLocaleDateString('en-CA');
+    }
+    function taskStatusText(t) {
+      return taskOverdue(t) ? 'באיחור' : ({open:'פתוחה',progress:'בביצוע',done:'הושלמה'}[t.status] || 'פתוחה');
+    }
+    function renderTasks() {
+      const list = document.getElementById('tasks-list');
+      if (!list) return;
+      const filterStatus = document.getElementById('tasks-status-filter').value;
+      const filterPerson = document.getElementById('tasks-assignee-filter').value;
+      const search = document.getElementById('tasks-search').value.trim().toLocaleLowerCase('he');
+      const active = tasks.filter(t => t.status !== 'done');
+      document.getElementById('task-count-all').textContent = tasks.length;
+      document.getElementById('task-count-open').textContent = active.length;
+      document.getElementById('task-count-done').textContent = tasks.filter(t=>t.status==='done').length;
+      document.getElementById('task-count-overdue').textContent = tasks.filter(taskOverdue).length;
+      const filtered = tasks.filter(t =>
+        (!filterPerson || t.assignee === filterPerson) &&
+        (!filterStatus || (filterStatus === 'overdue' ? taskOverdue(t) : t.status === filterStatus)) &&
+        (!search || ((t.title||'')+' '+(t.description||'')).toLocaleLowerCase('he').includes(search))
+      ).sort((a,b)=>Number(a.status==='done')-Number(b.status==='done') || (a.due||'9999').localeCompare(b.due||'9999'));
+      list.replaceChildren();
+      if (!filtered.length) {
+        const p=document.createElement('p');p.className='text-slate-300 text-sm p-4';p.textContent='אין משימות להצגה';list.append(p);return;
+      }
+      filtered.forEach(t=>{
+        const row=document.createElement('div');
+        row.className='glass-subcard rounded-2xl p-4 flex flex-wrap items-center gap-3';
+        const check=document.createElement('input');check.type='checkbox';check.checked=t.status==='done';check.disabled=isGuestMode;check.className='w-5 h-5 accent-emerald-500 cursor-pointer';check.setAttribute('aria-label','סימון משימה כהושלמה');check.onchange=()=>updateTaskStatus(t.id,check.checked?'done':'open');
+        const body=document.createElement('div');body.className='flex-1 min-w-40';
+        const title=document.createElement('div');title.textContent=t.title||'';title.className='font-bold '+(t.status==='done'?'line-through text-slate-400':'');
+        const desc=document.createElement('div');desc.textContent=t.description||'';desc.className='text-xs text-slate-400';
+        body.append(title,desc);
+        const info=document.createElement('div');info.className='text-xs text-slate-300';info.textContent=(t.assignee||'')+' · '+(t.due||'ללא תאריך')+' · '+({high:'גבוהה',medium:'בינונית',low:'נמוכה'}[t.priority]||'בינונית');
+        const status=document.createElement('span');status.className='rounded-full px-3 py-1 text-xs border border-white/20 '+(taskOverdue(t)?'text-rose-300':t.status==='done'?'text-emerald-300':t.status==='progress'?'text-sky-300':'text-amber-300');status.textContent=taskStatusText(t);
+        row.append(check,body,info,status);
+        if(!isGuestMode){
+          const edit=document.createElement('button');edit.textContent='עריכה';edit.className='pill-btn-glass rounded-full px-3 py-2 text-xs';edit.onclick=()=>openTaskForm(t.id);
+          const del=document.createElement('button');del.textContent='מחיקה';del.className='text-rose-300 px-2 py-2 text-xs';del.onclick=()=>deleteTask(t.id);
+          row.append(edit,del);
+        }
+        list.append(row);
+      });
+    }
+    function openTaskForm(id='') {
+      if(isGuestMode) return;
+      const t=tasks.find(x=>x.id===id);
+      const form=document.getElementById('task-form');form.reset();
+      document.getElementById('task-edit-id').value=id;
+      document.getElementById('task-modal-title').textContent=t?'עריכת משימה':'הוספת משימה';
+      document.getElementById('task-title').value=t?.title||'';
+      document.getElementById('task-description').value=t?.description||'';
+      document.getElementById('task-assignee').value=t?.assignee||currentUser||'אסף';
+      document.getElementById('task-due').value=t?.due||'';
+      document.getElementById('task-priority').value=t?.priority||'medium';
+      document.getElementById('task-status').value=t?.status||'open';
+      const modal=document.getElementById('task-form-modal');modal.classList.remove('hidden');modal.classList.add('flex');
+    }
+    function closeTaskForm() { const m=document.getElementById('task-form-modal');m.classList.add('hidden');m.classList.remove('flex'); }
+    async function saveTask(event) {
+      event.preventDefault();if(isGuestMode||!auth.currentUser)return;
+      const id=document.getElementById('task-edit-id').value;
+      const data={title:document.getElementById('task-title').value.trim(),description:document.getElementById('task-description').value.trim(),
+        assignee:document.getElementById('task-assignee').value,due:document.getElementById('task-due').value,
+        priority:document.getElementById('task-priority').value,status:document.getElementById('task-status').value,
+        updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
+      if(!data.title)return;
+      const b=document.getElementById('task-save-btn');b.disabled=true;
+      try {
+        if(id)await tasksCollection.doc(id).update(data);
+        else await tasksCollection.add({...data,createdBy:currentUser,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+        closeTaskForm();showToast('המשימה נשמרה');
+      }catch(e){alert('לא ניתן לשמור משימה: '+e.message)}finally{b.disabled=false}
+    }
+    async function updateTaskStatus(id,status) {
+      if(isGuestMode||!auth.currentUser)return;
+      try{await tasksCollection.doc(id).update({status,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});showToast('סטטוס המשימה עודכן')}
+      catch(e){alert('שגיאה בעדכון: '+e.message)}
+    }
+    async function deleteTask(id) {
+      if(isGuestMode||!auth.currentUser||!confirm('למחוק את המשימה?'))return;
+      try{await tasksCollection.doc(id).delete();showToast('המשימה נמחקה')}
+      catch(e){alert('שגיאה במחיקה: '+e.message)}
     }
 
     function sortAlphabetically(items) {
