@@ -24,7 +24,7 @@ const browser=browserPaths.find(p=>fs.existsSync(p));
 if(!browser){console.error('No Chrome/Edge available');process.exit(1)}
 admin.initializeApp({credential:admin.credential.applicationDefault()});
 const db=admin.firestore();
-const client=new Client({authStrategy:new LocalAuth({clientId:'roommates-bot',dataPath:path.resolve(ROOT,'../../../private-session')}),puppeteer:{executablePath:browser,headless:true}});
+const client=new Client({authStrategy:new LocalAuth({clientId:'roommates-bot',dataPath:path.resolve(ROOT,'../../private-session')}),puppeteer:{executablePath:browser,headless:true}});
 let running=false;
 let stopping=false;
 let group;
